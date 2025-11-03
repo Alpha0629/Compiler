@@ -26,8 +26,4 @@ public class Token {
         // return value + " " + key + " " + line + '\n';
         return value + " " + key + '\n';
     }
-
-    public String toStringInFIle() {
-        return value + " " + key;
-    }
 }
