@@ -1,4 +1,4 @@
-package frontend;
+package frontend.Lexer;
 public class Token {
     private final String key;
     private final TokenType value;
@@ -23,6 +23,11 @@ public class Token {
     }
 
     public String toString() {
+        // return value + " " + key + " " + line + '\n';
+        return value + " " + key + '\n';
+    }
+
+    public String toStringInFIle() {
         return value + " " + key;
     }
 }
