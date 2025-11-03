@@ -1,44 +1,44 @@
 package frontend.Lexer;
 
 public enum TokenType {
-    IDENFR,
-    INTCON,
-    STRCON,
-    CONSTTK,
-    INTTK,
-    STATICTK,
-    BREAKTK,
-    CONTINUETK,
-    IFTK,
-    MAINTK,
-    ELSETK,
-    NOT,
-    AND,
-    OR,
-    FORTK,
-    RETURNTK,
-    VOIDTK,
-    PLUS,
-    MINU,
-    PRINTFTK,
-    MULT,
-    DIV,
-    MOD,
-    LSS,
-    LEQ,
-    GRE,
-    GEQ,
-    EQL,
-    NEQ,
-    SEMICN,
-    COMMA,
-    LPARENT,
-    RPARENT,
-    LBRACK,
-    RBRACK,
-    LBRACE,
-    RBRACE,
-    ASSIGN,
+    IDENFR,     // 变量名
+    INTCON,     // 常数
+    STRCON,     // 字符串
+    CONSTTK,    // const
+    INTTK,      // int
+    STATICTK,   // static
+    BREAKTK,    // break
+    CONTINUETK, // continue
+    IFTK,       // if
+    MAINTK,     // main
+    ELSETK,     // else
+    NOT,        // not
+    AND,        // and
+    OR,         // or
+    FORTK,      // for
+    RETURNTK,   // return
+    VOIDTK,     // void
+    PLUS,       // +
+    MINU,       // -
+    PRINTFTK,   // printf
+    MULT,       // *
+    DIV,        // /
+    MOD,        // %
+    LSS,        // <
+    LEQ,        // <=
+    GRE,        // >
+    GEQ,        // >=
+    EQL,        // ==
+    NEQ,        // !=
+    SEMICN,     // ;
+    COMMA,      // ,
+    LPARENT,    // (
+    RPARENT,    // )
+    LBRACK,     // [
+    RBRACK,     // ]
+    LBRACE,     // {
+    RBRACE,     // }
+    ASSIGN,     // =
     EOF;
 
     @Override

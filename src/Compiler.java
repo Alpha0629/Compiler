@@ -26,7 +26,7 @@ public class Compiler {
         ArrayList<Error> errors = new ArrayList<>();
         Lexer lexer = new Lexer(content, outputPath, errorPath, errors);
         TokenList tokens = lexer.parse();
-        lexer.output();
+        // lexer.outputInFile();
         Parser parser = new Parser(tokens, outputPath, errorPath, errors);
         // parser.parse();
         Visitor visitor = new Visitor(parser.parse(), outputPath, errorPath, errors);

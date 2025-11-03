@@ -84,10 +84,6 @@ public class Parser {
         if (now.getValue() != TokenType.EOF) {
             compUnit = parseCompUnit();
         }
-        return compUnit;
-    }
-
-    public void output() {
         if (!errors.isEmpty()) {
             try {
                 PrintWriter writer = new PrintWriter(errorPath);
@@ -117,6 +113,7 @@ public class Parser {
                 e.printStackTrace();
             }
         }
+        return compUnit;
     }
 
     // CompUnit → {Decl} {FuncDef} MainFuncDef
@@ -162,7 +159,7 @@ public class Parser {
 
     public Decl parseDecl() {
         // 声明 Decl → ConstDecl | VarDecl 
-        // now == const或int
+        // now == const或int,也有可能是static
         // System.out.println("正在解析Decl");
         ConstDecl constDecl = null;
         VarDecl varDecl = null;
@@ -621,6 +618,7 @@ public class Parser {
     }
 
     public Cond parseCond() {
+        // 条件表达式 Cond → LOrExp
         // System.out.println("正在解析Cond");
         return new Cond(parseLOrExp());
     }
@@ -945,7 +943,7 @@ public class Parser {
             // System.out.println("正在解析ReturnStmt");
             // 共有四种可能
             // return;
-            // return   只能从下一行进行判断，下一个终结符可能是'{' or '}' or 'if' or 'for' or 'break' or 'return' or 'printf' or const or int or static
+            // return   只能从下一行进行判断，下一个终结符可能是'{' or '}' or 'if' or 'else' or 'for' or 'break' or 'return' or 'printf' or const or int or static
             // return Exp; 
             // return Exp
             Exp exp = null;
@@ -956,7 +954,7 @@ public class Parser {
                 // 第一种
                 now = getNextToken();
                 return new ReturnStmt(Return, exp);
-            } else if (now.getValue() == TokenType.LBRACE || now.getValue() == TokenType.RBRACE || now.getValue() == TokenType.IFTK || now.getValue() == TokenType.FORTK || now.getValue() == TokenType.BREAKTK || now.getValue() == TokenType.RETURNTK || now.getValue() == TokenType.PRINTFTK || now.getValue() == TokenType.CONSTTK || now.getValue() == TokenType.INTTK || now.getValue() == TokenType.STATICTK) {
+            } else if (now.getValue() == TokenType.LBRACE || now.getValue() == TokenType.RBRACE || now.getValue() == TokenType.IFTK || now.getValue() == TokenType.ELSETK ||now.getValue() == TokenType.FORTK || now.getValue() == TokenType.BREAKTK || now.getValue() == TokenType.RETURNTK || now.getValue() == TokenType.PRINTFTK || now.getValue() == TokenType.CONSTTK || now.getValue() == TokenType.INTTK || now.getValue() == TokenType.STATICTK) {
                 // 第二种的部分情况
                 addError(new Error(ErrorType.i, getLastToken().getLine()));
                 return new ReturnStmt(Return, exp);
@@ -1072,10 +1070,11 @@ public class Parser {
             }
             return new ExpStmt(exp);
         } else if (now.getValue() == TokenType.SEMICN) {
-            // 属于第二种且无Exp且有引号结尾
+            // 属于第二种且无Exp且有分号结尾
             now = getNextToken();
             return new ExpStmt(exp);
         } else if (now.getValue() != TokenType.IDENFR) {
+            // 应该不会出现这种情况
             // 如果不是ident，说明是第二种且引号缺失
             addError(new Error(ErrorType.i, getLastToken().getLine()));
             return new ExpStmt(exp);
