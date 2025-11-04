@@ -56,6 +56,7 @@ import java.util.Stack;
 
 public class Visitor {
     private final CompUnit compUnit;
+    private final SymbolTable root;
     private final ArrayList<Error> errors;
     private final String outputPath;
     private final String errorPath;
@@ -67,6 +68,7 @@ public class Visitor {
 
     public Visitor(CompUnit compUnit, String outputPath, String errorPath, ArrayList<Error> errors) {
         this.compUnit = compUnit;
+        this.root = null;
         this.outputPath = outputPath;
         this.errorPath = errorPath;
         this.additionalOutputPath = "C:\\Users\\Alpha\\IdeaProjects\\Compiler\\myOutput.txt";
@@ -81,38 +83,8 @@ public class Visitor {
         return symbolTableStack;
     }
 
-    public SymbolTable visit() {
+    public void visit() {
         SymbolTable root = visitCompUnit(compUnit);
-        if (!errors.isEmpty()) {
-            try {
-                PrintWriter writer = new PrintWriter(errorPath);
-                // 按照行号排序
-                errors.sort((e1, e2) -> Integer.compare(e1.getLine(), e2.getLine()));
-                for (int i = 0; i < errors.size(); i++) {
-                    writer.println(errors.get(i).toString());
-                }
-                writer.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        } else {
-            try {
-                // 输出到主输出路径
-                PrintWriter writer = new PrintWriter(outputPath);
-                writer.println(root.toString());
-                writer.close();
-
-                // 如果指定了额外输出路径，也输出到该路径
-                if (additionalOutputPath != null) {
-                    PrintWriter additionalWriter = new PrintWriter(additionalOutputPath);
-                    additionalWriter.println(root.toString());
-                    additionalWriter.close();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        return root;
     }
 
     //  CompUnit → {Decl} {FuncDef} MainFuncDef
@@ -717,5 +689,25 @@ public class Visitor {
 
     public void exitLoop() {
         loopStack.pop();
+    }
+
+    public void outputInFile() {
+        if (errors.isEmpty()) {
+            try {
+                // 输出到主输出路径
+                PrintWriter writer = new PrintWriter(outputPath);
+                writer.println(root.toString());
+                writer.close();
+
+                // 如果指定了额外输出路径，也输出到该路径
+                if (additionalOutputPath != null) {
+                    PrintWriter additionalWriter = new PrintWriter(additionalOutputPath);
+                    additionalWriter.println(root.toString());
+                    additionalWriter.close();
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 }

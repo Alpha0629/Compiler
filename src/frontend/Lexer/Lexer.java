@@ -1,5 +1,6 @@
 package frontend.Lexer;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.*;
@@ -269,24 +270,19 @@ public class Lexer {
     }
 
     public void outputInFile() {
-        try {
-            if (errors.isEmpty()) {
-                PrintWriter writer = new PrintWriter(outputPath);
-                for (int i = 0; i < tokens.size(); i++) {
-                    if (tokens.get(i).getValue() != TokenType.EOF) {
-                        writer.println(tokens.get(i).toStringInFIle());
-                    }
-                }
-                writer.close();
-            } else {
-                PrintWriter writer = new PrintWriter(errorPath);
-                for (int i = 0; i < errors.size(); i++) {
-                    writer.println(errors.get(i).toString());
-                }
-                writer.close();
+        if (errors.isEmpty()) {
+            PrintWriter writer = null;
+            try {
+                writer = new PrintWriter(outputPath);
+            } catch (FileNotFoundException e) {
+                throw new RuntimeException(e);
             }
-        } catch (IOException e) {
-            e.printStackTrace();
+            for (int i = 0; i < tokens.size(); i++) {
+                if (tokens.get(i).getValue() != TokenType.EOF) {
+                    writer.println(tokens.get(i).toStringInFIle());
+                }
+            }
+            writer.close();
         }
     }
 

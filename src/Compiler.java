@@ -2,35 +2,90 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Comparator;
 
 import frontend.Lexer.Lexer;
 import frontend.Lexer.TokenList;
+import frontend.Parser.Node.CompUnit;
 import frontend.Parser.Parser;
 import frontend.Error.Error;
 import frontend.Visitor.Visitor;
+import llvm.IrBuilder;
 
 public class Compiler {
-    public static void main(String[] args) {
-        ClassLoader.getSystemClassLoader().setDefaultAssertionStatus(true);
+    public static ArrayList<Error> errors = new ArrayList<>();
+    public static String filePath = "testfile.txt";
+    public static String errorPath = "error.txt";
+    public static TokenList tokens;
+    public static CompUnit AST;
+    public static String content;
+    public static Lexer lexer;
+    public static Parser parser;
+    public static Visitor visitor;
+    public static IrBuilder irBuilder;
 
-        String filePath = "testfile.txt";
-        String outputPath = "symbol.txt";
-        String errorPath = "error.txt";
-        String content = new String();
+    public static void File2String() {
         try {
             content = new String(Files.readAllBytes(Paths.get(filePath)));
-            // System.err.println(content);
         } catch (IOException e) {
-            e.printStackTrace();
+            content = "";
         }
-        ArrayList<Error> errors = new ArrayList<>();
-        Lexer lexer = new Lexer(content, outputPath, errorPath, errors);
-        TokenList tokens = lexer.parse();
-        // lexer.outputInFile();
-        Parser parser = new Parser(tokens, outputPath, errorPath, errors);
-        // parser.parse();
-        Visitor visitor = new Visitor(parser.parse(), outputPath, errorPath, errors);
+    }
+
+    public static void outputErrorInFile() {
+        System.out.println("Contains Errors, Stop code generation");
+        try {
+            PrintWriter writer = new PrintWriter(errorPath);
+            errors.sort(Comparator.comparingInt(Error::getLine));
+            for (Error error : errors) {
+                writer.println(error.toString());
+            }
+            writer.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void generateLexer() {
+        System.out.println("Generating lexer");
+        lexer = new Lexer(content, "lexer.txt", errorPath, errors);
+        tokens = lexer.parse();
+    }
+
+    public static void generateParser() {
+        System.out.println("Generating parser");
+        parser = new Parser(tokens, "parser.txt", errorPath, errors);
+        AST = parser.parse();
+        parser.outputInFile();
+    }
+
+    public static void generateVisitor() {
+        System.out.println("Generating visitor");
+        visitor = new Visitor(AST, "symbol.txt", errorPath, errors);
         visitor.visit();
-        // System.out.println(parser.parse());
+    }
+
+    public static void generateIrBuilder() {
+        System.out.println("Generating ir builder");
+        irBuilder = new IrBuilder(AST);
+    }
+
+    public static void generateMips() {
+        System.out.println("Generating Mips");
+        //
+    }
+
+    public static void main(String[] args) {
+        ClassLoader.getSystemClassLoader().setDefaultAssertionStatus(true);
+        File2String();
+        generateLexer();
+        generateParser();
+        generateVisitor();
+        if (errors.isEmpty()) {
+            generateIrBuilder();
+            generateMips();
+        } else {
+            outputErrorInFile();
+        }
     }
 }

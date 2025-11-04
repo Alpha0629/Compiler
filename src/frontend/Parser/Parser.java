@@ -84,37 +84,9 @@ public class Parser {
         if (now.getValue() != TokenType.EOF) {
             compUnit = parseCompUnit();
         }
-        if (!errors.isEmpty()) {
-            try {
-                PrintWriter writer = new PrintWriter(errorPath);
-                // 按照行号排序
-                errors.sort((e1, e2) -> Integer.compare(e1.getLine(), e2.getLine()));
-                for (int i = 0; i < errors.size(); i++) {
-                    writer.println(errors.get(i).toString());
-                }
-                writer.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        } else {
-            try {
-                // 输出到主输出路径
-                PrintWriter writer = new PrintWriter(outputPath);
-                writer.println(compUnit.toString());
-                writer.close();
-
-                // 如果指定了额外输出路径，也输出到该路径
-                if (additionalOutputPath != null) {
-                    PrintWriter additionalWriter = new PrintWriter(additionalOutputPath);
-                    additionalWriter.println(compUnit.toString());
-                    additionalWriter.close();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
         return compUnit;
     }
+
 
     // CompUnit → {Decl} {FuncDef} MainFuncDef
     // {Decl} 第一个终结符为const或者int
@@ -1147,5 +1119,25 @@ public class Parser {
 
     public void addError(Error error) {
         if (check) this.errors.add(error);
+    }
+
+    public void outputInFile() {
+        if (errors.isEmpty()) {
+            try {
+                // 输出到主输出路径
+                PrintWriter writer = new PrintWriter(outputPath);
+                writer.println(compUnit.toString());
+                writer.close();
+
+                // 如果指定了额外输出路径，也输出到该路径
+                if (additionalOutputPath != null) {
+                    PrintWriter additionalWriter = new PrintWriter(additionalOutputPath);
+                    additionalWriter.println(compUnit.toString());
+                    additionalWriter.close();
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 }
