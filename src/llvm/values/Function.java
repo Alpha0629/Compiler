@@ -1,4 +1,4 @@
 package llvm.values;
 
-public class Function {
+public class Function extends Value {
 }

@@ -1,4 +1,4 @@
 package llvm.values;
 
-public class BasicBlock {
+public class BasicBlock extends Value {
 }

@@ -4,15 +4,19 @@ package llvm.types;
  * {@code @Description} 指针变量
  */
 public class PointerType extends ValueType {
-    private final ValueType pointer;    // 指针指向的类型
+    private final ValueType pointedType;    // 指针指向的类型
 
-    public PointerType(IntType pointer) {
-        this.pointer = pointer;
+    public PointerType(IntType pointedType) {
+        this.pointedType = pointedType;
     }
 
-//    public PointerType(ValueType pointer) {
-//        this.pointer = pointer;
+//    public PointerType(ValueType pointedType) {
+//        this.pointedType = pointedType;
 //    }
+
+    public ValueType getPointedType() {
+        return this.pointedType;
+    }
 
     @Override
     public int getBytes() {
@@ -26,6 +30,6 @@ public class PointerType extends ValueType {
 
     @Override
     public String toString() {
-        return pointer.toString() + "*";
+        return pointedType.toString() + "*";
     }
 }

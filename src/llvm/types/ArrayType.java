@@ -24,6 +24,10 @@ public class ArrayType extends ValueType {
         return this.bytes;
     }
 
+    public ValueType getElementType() {
+        return this.elementType;
+    }
+
     @Override
     public String toString() {
         return "[" + this.length + " x " + this.elementType.toString() + "]";
