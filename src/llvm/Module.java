@@ -1,6 +1,5 @@
 package llvm;
 
-import llvm.values.Declaration;
 import llvm.values.Function;
 import llvm.values.GlobalVar;
 import llvm.values.GlobalString;
@@ -8,20 +7,14 @@ import llvm.values.GlobalString;
 import java.util.ArrayList;
 
 public class Module {
-    private final ArrayList<Declaration> declarations;
     private final ArrayList<GlobalString> globalStrings;
     private final ArrayList<GlobalVar> globalVars;
     private final ArrayList<Function> functions;
 
     public Module() {
-        this.declarations = new ArrayList<>();
         this.globalStrings = new ArrayList<>();
         this.globalVars = new ArrayList<>();
         this.functions = new ArrayList<>();
-    }
-
-    public void addDeclaration(Declaration declaration) {
-        this.declarations.add(declaration);
     }
 
     public void addConstString(GlobalString constString) {
@@ -39,10 +32,6 @@ public class Module {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        for (Declaration declaration : declarations) {
-            sb.append(declaration.toString());
-            sb.append("\n");
-        }
         for (GlobalString constString : globalStrings) {
             sb.append(constString.toString());
             sb.append("\n");
