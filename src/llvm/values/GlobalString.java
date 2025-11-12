@@ -7,9 +7,9 @@ public class GlobalString extends User {
     // @str.0 = constant [13 x i8] c"Hello World!\00"
     private final ConstString constString;
 
-    public GlobalString(String name, ValueType valueType, Value parent, ConstString constString) {
+    public GlobalString(String name, ValueType valueType, ConstString constString) {
         // 保证ValueType是指针类型，指针指向的是数组类型，数组内的元素类型是i8
-        super("@str." + name, valueType, parent);
+        super("@str." + name, valueType);
         this.constString = constString;
     }
 

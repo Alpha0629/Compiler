@@ -1,0 +1,595 @@
+package llvm;
+
+import frontend.Lexer.TokenType;
+import frontend.Parser.Node.BType;
+import frontend.Parser.Node.Block;
+import frontend.Parser.Node.BlockItem;
+import frontend.Parser.Node.CompUnit;
+import frontend.Parser.Node.ConstDecl;
+import frontend.Parser.Node.ConstDef;
+import frontend.Parser.Node.ConstInitVal;
+import frontend.Parser.Node.Decl;
+import frontend.Parser.Node.Exp.AddExp;
+import frontend.Parser.Node.Exp.ConstExp;
+import frontend.Parser.Node.Exp.Exp;
+import frontend.Parser.Node.Exp.MulExp;
+import frontend.Parser.Node.Exp.PrimaryExp;
+import frontend.Parser.Node.Exp.UnaryExp;
+import frontend.Parser.Node.FuncDef;
+import frontend.Parser.Node.FuncFParam;
+import frontend.Parser.Node.FuncFParams;
+import frontend.Parser.Node.InitVal;
+import frontend.Parser.Node.MainFuncDef;
+import frontend.Parser.Node.Statement.Stmt;
+import frontend.Parser.Node.VarDecl;
+import frontend.Parser.Node.VarDef;
+import llvm.types.ArrayType;
+import llvm.types.FuncType;
+import llvm.types.IntType;
+import llvm.types.PointerType;
+import llvm.types.ValueType;
+import llvm.types.VoidType;
+import llvm.values.BasicBlock;
+import llvm.values.Function;
+import llvm.values.GlobalVar;
+import llvm.values.Value;
+import llvm.values.constants.ConstArray;
+import llvm.values.constants.ConstInt;
+import llvm.values.constants.Constant;
+import llvm.values.instructions.Alloca;
+import llvm.values.instructions.Gep;
+
+import java.util.ArrayList;
+import java.util.Collections;
+
+/**
+ * {@code @Description} Ir构建器
+ */
+public class IrMaker {
+    private final Module module;
+    private final IrUtils irUtils;
+    private final CompUnit AST; // 语法分析得到的抽象语法树
+    private final IrSymbolTableStack irSymbolTableStack;  // 符号表栈，每一个符号表代表一个作用区域
+
+    public static IntType I32 = new IntType(32);
+    public static IntType I8 = new IntType(8);
+    public static IntType I1 = new IntType(1);
+
+    public static VoidType VoidType = new VoidType();
+
+    public static ConstInt C0 = new ConstInt(I32, 0);
+
+
+    public static BasicBlock currentBlock;  // 当前的块
+    public static Function currentFunction; // 当前的函数体
+    public static Constant comprehensiveConst; // 综合属性(能求到常值的向上传递)
+    public static ArrayList<Value> comprehensiveValues; // 综合属性(用于数组中, 向上传递)
+    public static Value comprehensiveValue;
+    public static ArrayList<ValueType> comprehensiveArgTypes;
+    public static ValueType comprehensiveArgType;
+
+    public static Value inheritedValue; // 继承属性(Value向下传递)
+    public static String inheritedName; // 继承属性(变量的名字向下传递) (用于向Symbol中添加名字)
+    public static String comprehensiveVarName; // 综合属性, 由ident传给上层, 传递的内容是变量的名字
+    public static BType inheritedBType; // 继承属性(用于确定当前变量的类型)
+    public static Boolean isStatic; // 继承属性(告诉下面的当前变量定义是不是静态的)
+    public static Boolean compileTimeConstRead;
+    public static int inheritedInt;
+    public static int comprehensiveInt;
+
+    public IrMaker(Module module, CompUnit AST) {
+        this.module = module;
+        this.irSymbolTableStack = new IrSymbolTableStack();
+        this.irUtils = new IrUtils(this.module, this.irSymbolTableStack);
+        this.AST = AST;
+    }
+
+    public void buildCompUnitIr() {
+        initDelcaration();
+        ArrayList<Decl> decls = AST.getDecls();
+        for (Decl decl : decls) {
+            buildDeclIr(decl);
+        }
+        ArrayList<FuncDef> funcDefs = AST.getFuncDefs();
+        for (FuncDef funcDef : funcDefs) {
+            buildFuncDefIr(funcDef);
+        }
+        buildMainFuncDefIr(AST.getMainFuncDef());
+    }
+
+    public void buildDeclIr(Decl decl) {
+        // 声明 Decl → ConstDecl | VarDecl
+        ConstDecl constDecl = decl.getConstDecl();
+        VarDecl varDecl = decl.getVarDecl();
+        if (constDecl != null) {
+            buildConstDeclIr(constDecl);
+        } else {
+            buildVarDeclIr(varDecl);
+        }
+    }
+
+    public void buildConstDeclIr(ConstDecl constDecl) {
+        // 常量声明 ConstDecl → 'const' BType ConstDef { ',' ConstDef } ';'
+        BType bType = constDecl.getBType();
+        for (ConstDef constDef : constDecl.getConstDefs()) {
+            // 变量类型要传给下一层，即 buildConstDefIr
+            IrMaker.inheritedBType = bType;
+            buildConstDefIr(constDef);
+        }
+    }
+
+    public void buildConstDefIr(ConstDef constDef) {
+        // 常量定义 ConstDef → Ident [ '[' ConstExp ']' ] '=' ConstInitVal
+        ConstExp constExp = constDef.getConstExp();
+        ConstInitVal constInitVal = constDef.getConstInitVal();
+        IrMaker.comprehensiveVarName = constDef.getIdent().getKey();   // 从ident传上来的变量名
+        // 情况一: Ident '=' ConstInitVal
+        // const int a = 3;
+        if (constExp == null) {
+            // 直接添加到符号表当中，不创建指令
+            IrMaker.compileTimeConstRead = Boolean.TRUE;
+            buildConstInitValIr(constInitVal); // 传上来 IrMaker.comprehensiveConst
+            IrMaker.compileTimeConstRead = Boolean.FALSE;
+            assert (IrMaker.comprehensiveConst instanceof ConstInt);
+            irSymbolTableStack.putSymbolToCurScope(IrMaker.comprehensiveVarName, IrMaker.comprehensiveConst);
+        } else {
+            // 情况二: 数组常量
+            IrMaker.compileTimeConstRead = Boolean.TRUE;
+            buildConstExpIr(constExp);  // 传上来数组的长度len, 放在了 IrMaker.comprehensiveConst 里面
+            IrMaker.compileTimeConstRead = Boolean.FALSE;
+            assert (IrMaker.comprehensiveConst instanceof ConstInt);
+            int len = ((ConstInt) IrMaker.comprehensiveConst).getVal();
+            IrMaker.inheritedInt = len; // 把数组长度传给 buildConstInitValIr
+
+            IrMaker.compileTimeConstRead = Boolean.TRUE;
+            buildConstInitValIr(constInitVal); // 传上来数组的初值, 放在了 IrMaker.comprehensiveConst 里面
+            IrMaker.compileTimeConstRead = Boolean.FALSE;
+            assert (IrMaker.comprehensiveConst instanceof ConstArray);
+
+            if (irSymbolTableStack.inGlobalScope()) {
+                // 如果是全局变量, 不需要进行Alloca, 直接makeGlobalVar
+                GlobalVar globalVar = irUtils.makeGlobalVar(IrMaker.comprehensiveVarName, IrMaker.comprehensiveConst, true, false);
+                irSymbolTableStack.putSymbolToGlobal(IrMaker.comprehensiveVarName, globalVar);
+            } else {
+                // 函数内部的const int array[len] = {constInitVal};
+                // 先用Alloca分配内存, 再用getelementptr获取每个元素的地址, 再用store逐个为其赋初始值
+                // %v1 = alloca [3 x i32]
+                // %v2 = getelementptr inbounds [3 x i32], [3 x i32]* %v1, i32 0, i32 0
+                // store i32 0, i32* %v2
+                // %v3 = getelementptr inbounds i32, i32* %v2, i32 1
+                // store i32 3, i32* %v3
+                // %v4 = getelementptr inbounds i32, i32* %v2, i32 2
+                // store i32 4, i32* %v4
+                ArrayType arrayType = (ArrayType) (IrMaker.comprehensiveConst).getValueType();
+                Alloca alloca = irUtils.makeAlloca(arrayType, (ConstArray) IrMaker.comprehensiveConst);
+                irSymbolTableStack.putSymbolToCurScope(IrMaker.comprehensiveVarName, alloca); // 把这个数组的名称, 空间, 添加到当前符号表
+                // for循环进行gep和store
+                ArrayList<Constant> constants = ((ConstArray) IrMaker.comprehensiveConst).getConstants();
+                // 第一种gep指令, left和right都必须是i32 0, i32 0
+                // 第一个参数用的是之前alloca的%v1
+                Gep baseGep = irUtils.makeGep(alloca, C0, C0);
+                for (int i = 0; i < len; i++) {
+                    Constant curStoredValue = constants.get(i);
+                    if (i == 0) {
+                        // 把分配到的地方%v2赋上初始值
+                        irUtils.makeStore(curStoredValue, baseGep);
+                    } else {
+                        // 后续都是第二种gep指令
+                        Gep gep = irUtils.makeGep(baseGep, new ConstInt(I32, i));   // 按照i进行偏移
+                        irUtils.makeStore(curStoredValue, gep);
+                    }
+                }
+            }
+        }
+    }
+
+    public void buildConstInitValIr(ConstInitVal constInitVal) {
+        ConstExp constExp = constInitVal.getConstExp();
+        if (constExp != null) {
+            // 情况一: 对应的是const int类型的初始化
+            IrMaker.compileTimeConstRead = Boolean.TRUE;
+            buildConstExpIr(constExp);
+            IrMaker.compileTimeConstRead = Boolean.FALSE;
+            // 已经得到了初始值, 放入了 IrMaker.comprehensiveConst (向上传递给ConstDef)
+        } else {
+            // 情况二: 对应的是const数组的初始化
+            // 数组长度继承下来, 存放于 IrMaker.inheritedInt
+            ArrayList<ConstExp> constExps = constInitVal.getConstExps();
+            ArrayList<Constant> constants = new ArrayList<>(); // {1, 2, 9, 8}
+            // 前i个有初始值的部分
+            for (int i = 0; i < constExps.size(); i++) {
+                ConstExp constExpr = constExps.get(i);
+                IrMaker.compileTimeConstRead = Boolean.TRUE;
+                buildConstExpIr(constExpr);
+                IrMaker.compileTimeConstRead = Boolean.FALSE;
+                // 已经得到了初始值, 放入了 IrMaker.comprehensiveConst
+                assert (IrMaker.comprehensiveConst instanceof ConstInt);
+                constants.add(IrMaker.comprehensiveConst);
+            }
+            // 后len - i个没有初始值的部分，手动设置为0
+            for (int i = 0; i < IrMaker.inheritedInt - constExps.size(); i++) {
+                constants.add(C0);
+            }
+            // 所有初始值都存于 ArrayList<Constant> constants
+            // 现在需要构造 ConstArray 类型的综合属性
+            IrMaker.comprehensiveConst = new ConstArray(new ArrayType(I32, constants.size()), constants);
+        }
+    }
+
+    public void buildVarDeclIr(VarDecl varDecl) {
+        // 变量声明 VarDecl → [ 'static' ] BType VarDef { ',' VarDef } ';'
+        IrMaker.isStatic = varDecl.isStatic();
+        IrMaker.inheritedBType = varDecl.getBType();
+        for (VarDef varDef : varDecl.getVarDefs()) {
+            buildVarDefIr(varDef);
+        }
+    }
+
+    public void buildVarDefIr(VarDef varDef) {
+        // 变量定义 VarDef → Ident [ '[' ConstExp ']' ] | Ident [ '[' ConstExp ']' ] '=' InitVal
+        ConstExp constExp = varDef.getConstExp();
+        InitVal initVal = varDef.getInitVal();
+        IrMaker.comprehensiveVarName = varDef.getIdent().getKey();   // 从ident传上来的变量名
+
+        if (constExp == null) {
+            // 情况一: just Ident or Ident '=' ConstInitVal
+            if (irSymbolTableStack.inGlobalScope()) {
+                // 情况1.1: 全局int型变量, 例如int a = 10 or int a;
+                if (initVal == null) {
+                    // 情况1.1.1 仅有 int a;
+                    // 全局变量不可能存在static的情况, 故不需要考虑
+                    // 没有明确初始化的int型全局变量, 默认为C0
+                    GlobalVar globalVar = irUtils.makeGlobalVar(IrMaker.comprehensiveVarName, C0, false, false);
+                    irSymbolTableStack.putSymbolToGlobal(IrMaker.comprehensiveVarName, globalVar);
+                } else {
+                    // 情况1.1.1 有初始值 int a = 10;
+                    // 全局变量一定可以求到具体的值
+                    IrMaker.compileTimeConstRead = Boolean.TRUE;
+                    buildInitValIr(initVal);    // 返回了ConstInt于 IrMaker.comprehensiveConst
+                    IrMaker.compileTimeConstRead = Boolean.FALSE;
+                    assert (IrMaker.comprehensiveConst instanceof ConstInt);
+                    GlobalVar globalVar = irUtils.makeGlobalVar(IrMaker.comprehensiveVarName, IrMaker.comprehensiveConst, false, false);
+                    irSymbolTableStack.putSymbolToGlobal(IrMaker.comprehensiveVarName, globalVar);
+                }
+            } else {
+                // 情况1.2 局部变量
+                if (initVal == null) {
+                    // 情况1.2.1 局部变量 仅有 int a; 无初始化
+                    if (IrMaker.isStatic) {
+                        // 情况1.2.1.1 局部变量 + 无初始化 + 静态变量
+                        // 默认初始化为C0
+                        GlobalVar globalVar = irUtils.makeGlobalVar(IrMaker.comprehensiveVarName, C0, false, true);
+                        // 添加到当前作用域的符号表内
+                        irSymbolTableStack.putSymbolToCurScope(IrMaker.comprehensiveVarName, globalVar);
+                    } else {
+                        // 情况1.2.1.2 局部变量 + 无初始化 + 非静态变量
+                        // 需要使用Alloca分配内存, 并存储到当前作用域的符号表内
+                        // %v1 = alloca i32
+                        Alloca alloca = irUtils.makeAlloca(I32);
+                        irSymbolTableStack.putSymbolToCurScope(IrMaker.comprehensiveVarName, alloca);
+                    }
+                } else {
+                    // 情况1.2.2 局部变量 + 有初始化
+                    if (IrMaker.isStatic) {
+                        // 情况1.2.2.1 局部变量 + 有初始化 + 静态变量
+                        // 这种情况下的初始值一定是可以求得的
+                        IrMaker.compileTimeConstRead = Boolean.TRUE;
+                        buildInitValIr(initVal);    // 返回了ConstInt于 IrMaker.comprehensiveConst
+                        IrMaker.compileTimeConstRead = Boolean.FALSE;
+                        assert (IrMaker.comprehensiveConst instanceof ConstInt);
+                        GlobalVar globalVar = irUtils.makeGlobalVar(IrMaker.comprehensiveVarName, IrMaker.comprehensiveConst, false, true);
+                        // 添加到当前作用域的符号表内
+                        irSymbolTableStack.putSymbolToCurScope(IrMaker.comprehensiveVarName, globalVar);
+                    } else {
+                        // 情况1.2.2.2 局部变量 + 有初始化 + 非静态变量
+                        // int main() {
+                        //     int a = 10;
+                        //     int j = a;
+                        //     return 0;
+                        // }
+                        // %v2 = alloca i32     3. 给j分配内存, 但需要放在最前面
+                        // %v1 = alloca i32     1. 给a分配内存
+                        // store i32 10, i32* %v1   2. 把初始值放在a所在的内存
+                        // %v3 = load i32, i32* %v1 4. 把a的值转移到临时变量中
+                        // store i32 %v3, i32* %v2  5. 把临时变量的值存储给j所在的内存
+                        Alloca alloca = irUtils.makeAlloca(I32);        // 先给j分配内存, 放在最前面
+                        IrMaker.compileTimeConstRead = Boolean.FALSE;   // 确保不需要求值
+                        buildInitValIr(initVal);
+                        // 现在 IrMaker.comprehensiveValue 是%v3
+                        // 可以是Instruction, 也可以是Constant
+                        irUtils.makeStore(IrMaker.comprehensiveValue, alloca);
+                    }
+                }
+            }
+        } else {
+            // 情况二: 数组形式
+            IrMaker.compileTimeConstRead = Boolean.TRUE;
+            buildConstExpIr(constExp);  // 传上来数组的长度len, 放在了 IrMaker.comprehensiveConst 里面
+            IrMaker.compileTimeConstRead = Boolean.FALSE;
+            assert (IrMaker.comprehensiveConst instanceof ConstInt);
+            int len = ((ConstInt) IrMaker.comprehensiveConst).getVal();
+            IrMaker.inheritedInt = len; // 把数组长度传给 buildInitValIr
+
+            ArrayType zeroArrayType = new ArrayType(I32, len);
+            ArrayList<Constant> zeroConstants = new ArrayList<>();
+            for (int i = 0; i < len; i++) {
+                zeroConstants.add(C0);
+            }
+            ConstArray zeroInitializer = new ConstArray(zeroArrayType, zeroConstants);
+            // 先构造一个zeroInitializerd的constArray
+
+            if (irSymbolTableStack.inGlobalScope()) {
+                // 情况2.1: 全局int数组型变量
+                if (initVal == null) {
+                    // 情况2.1.1: 全局数组变量 + 无初始化
+                    // 默认设为全0
+                    GlobalVar globalVar = irUtils.makeGlobalVar(IrMaker.comprehensiveVarName, zeroInitializer, false, false);
+                    irSymbolTableStack.putSymbolToGlobal(IrMaker.comprehensiveVarName, globalVar);
+                } else {
+                    // 情况2.1.2: 全局数组变量 + 有初始化
+                    IrMaker.compileTimeConstRead = Boolean.TRUE;
+                    buildInitValIr(initVal);    // 传入了数组长度
+                    IrMaker.compileTimeConstRead = Boolean.FALSE;
+                    assert (IrMaker.comprehensiveConst instanceof ConstArray);
+                    GlobalVar globalVar = irUtils.makeGlobalVar(IrMaker.comprehensiveVarName, IrMaker.comprehensiveConst, false, false);
+                    irSymbolTableStack.putSymbolToGlobal(IrMaker.comprehensiveVarName, globalVar);
+                }
+            } else {
+                // 情况2.2: 局部int数组型变量
+                if (initVal == null) {
+                    // 情况2.2.1: 局部数组变量 + 无初始化
+                    if (IrMaker.isStatic) {
+                        // 情况2.2.1.1: 局部数组变量 + 无初始化 + 静态
+                        // 默认设为全0
+                        GlobalVar globalVar = irUtils.makeGlobalVar(IrMaker.comprehensiveVarName, zeroInitializer, false, true);
+                        irSymbolTableStack.putSymbolToCurScope(IrMaker.comprehensiveVarName, globalVar);
+                    } else {
+                        // 情况2.2.1.2: 局部数组变量 + 无初始化 + 非静态
+                        // int main() {
+                        //     int array[5];
+                        //     return 0;
+                        // }
+                        // %v1 = alloca [5 x i32] 一步即可
+                        ArrayType arrayType = new ArrayType(I32, len);
+                        Alloca alloca = irUtils.makeAlloca(arrayType);
+                        irSymbolTableStack.putSymbolToCurScope(IrMaker.comprehensiveVarName, alloca);
+                    }
+                } else {
+                    // 情况2.2.2: 局部数组变量 + 有初始化
+                    if (IrMaker.isStatic) {
+                        // 情况2.2.2.1: 局部数组变量 + 有初始化 + 静态
+                        // 有初始化的部分一定能求到具体的值, 没有初始化的部分要设为0
+                        IrMaker.compileTimeConstRead = Boolean.TRUE;
+                        buildInitValIr(initVal);
+                        IrMaker.compileTimeConstRead = Boolean.FALSE;
+                        assert (IrMaker.comprehensiveConst instanceof ConstArray);
+                        // 现在的 IrMaker.comprehensiveConst 是 ConstArray 类型, 并且长度即为len
+                        GlobalVar globalVar = irUtils.makeGlobalVar(IrMaker.comprehensiveVarName, IrMaker.comprehensiveConst, false, true);
+                        irSymbolTableStack.putSymbolToCurScope(IrMaker.comprehensiveVarName, globalVar);
+                    } else {
+                        // 情况2.2.2.2: 局部数组变量 + 有初始化 + 非静态
+                        // %v2 = alloca [5 x i32]
+                        // %v1 = alloca i32
+                        // store i32 1, i32* %v1
+                        // %v3 = load i32, i32* %v1
+                        // %v4 = getelementptr inbounds [5 x i32], [5 x i32]* %v2, i32 0, i32 0
+                        // store i32 %v3, i32* %v4
+                        // %v5 = getelementptr inbounds i32, i32* %v4, i32 1
+                        // store i32 4, i32* %v5
+                        // %v6 = getelementptr inbounds i32, i32* %v4, i32 2
+                        // store i32 9, i32* %v6
+                        // int main() {
+                        //     int x = 1;
+                        //     int array[5] = {x, 4, 9};
+                        // return 0;
+                        // }
+                        ArrayType arrayType = new ArrayType(I32, len);
+                        Alloca alloca = irUtils.makeAlloca(arrayType);
+                        irSymbolTableStack.putSymbolToCurScope(IrMaker.comprehensiveVarName, alloca);
+                        IrMaker.compileTimeConstRead = Boolean.FALSE;
+                        buildInitValIr(initVal);    // 传入了数组长度
+                        // buildInitValIr(initVal); 的结果存在了 IrMaker.comprehensiveValues
+                        Gep baseGep = irUtils.makeGep(alloca, C0, C0);
+                        for (int i = 0; i < IrMaker.comprehensiveValues.size(); i++) {
+                            Value curStoredValue = IrMaker.comprehensiveValues.get(i);
+                            if (i == 0) {
+                                irUtils.makeStore(curStoredValue, baseGep);
+                            } else {
+                                Gep gep = irUtils.makeGep(baseGep, new ConstInt(I32, i));   // 按照i进行偏移
+                                irUtils.makeStore(curStoredValue, gep);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public void buildInitValIr(InitVal initVal) {
+        Exp exp = initVal.getExp();
+        if (exp != null) {
+            // 情况一: int型变量的初始化
+            buildExpIr(exp);
+            // 如果需要求值, 则回传ConstInt类型给 IrMaker.comprehensiveConst
+            // 如果不需要求值, 则回传Value类型给 IrMaker.comprehensiveValue
+        } else {
+            // 情况二: 数组型变量的初始化
+            // 现在数组维度已知, 初始化的部分的长度也可知
+            // 此时要分为是全局数组 or 静态数组的变量初始化, 还是局部变量的初始化
+            ArrayList<Exp> exps = initVal.getExps();
+            ArrayList<Constant> constants = new ArrayList<>();
+            if (irSymbolTableStack.inGlobalScope() || IrMaker.isStatic) {
+                // 有初始化的部分
+                for (int i = 0; i < exps.size(); i++) {
+                    Exp expr = exps.get(i);
+                    buildExpIr(expr);   // 一定能求出常数值
+                    assert (IrMaker.comprehensiveConst instanceof ConstInt);
+                    constants.add(IrMaker.comprehensiveConst);
+                }
+                // 在没有初始化的部分, 使用0
+                for (int i = 0; i < IrMaker.inheritedInt - exps.size(); i++) {
+                    constants.add(C0);
+                }
+                IrMaker.comprehensiveConst = new ConstArray(new ArrayType(I32, constants.size()), constants);
+            } else {
+                IrMaker.comprehensiveValues.clear();    // 先清空
+                for (int i = 0; i < exps.size(); i++) {
+                    Exp expr = exps.get(i);
+                    buildExpIr(expr);   // 得不到常数值, 但放在了 IrMaker.comprehensiveValue 当中
+                    IrMaker.comprehensiveValues.add(IrMaker.comprehensiveValue);
+                }
+                return;
+            }
+        }
+    }
+
+    public void buildConstExpIr(ConstExp constExp) {
+        IrMaker.compileTimeConstRead = Boolean.TRUE;
+        buildAddExpIr(constExp.getAddExp());
+        IrMaker.compileTimeConstRead = Boolean.FALSE;
+        // 经过这步可以得到向上传递的 comprehensiveConst 记录了这个ConstExp的值(Int类型)
+    }
+
+    public void buildExpIr(Exp exp) {
+        buildAddExpIr(exp.getAddExp());
+    }
+
+    public void buildAddExpIr(AddExp addExp) {
+
+    }
+
+    public void buildMulExpIr(MulExp mulExp) {
+
+    }
+
+    public void buildUnaryExpIr(UnaryExp unaryExp) {
+
+    }
+
+    public void buildPrimaryExpIr(PrimaryExp primaryExp) {
+
+    }
+
+    public void buildFuncDefIr(FuncDef funcDef) {
+        ValueType returnValueType = funcDef.getFuncType().isVoid() ? VoidType : I32;
+        Block block = funcDef.getBlock();
+        IrMaker.inheritedName = funcDef.getIdent().getKey();    // 函数名
+
+        FuncFParams funcFParams = funcDef.getFuncFParams();
+
+        ArrayList<ValueType> parameterTypes = new ArrayList<>();
+        if (funcFParams != null) {
+            ArrayList<FuncFParam> funcFParamsList = funcFParams.getFuncFParams();
+            for (FuncFParam funcFParam : funcFParamsList) {
+                ValueType paramValueType = funcFParam.getIdent().getValue() == TokenType.INTTK ? I32 : VoidType;
+                if (funcFParam.isArray()) {
+                    // 参数是数组类型, 最终要转换成指针类型
+                    // int func(int c, int array[])
+                    // define dso_local i32 @func(i32 %a0, i32* %a1)
+                    parameterTypes.add(new PointerType(paramValueType));
+                } else {
+                    parameterTypes.add(paramValueType);
+                }
+            }
+        }
+
+        FuncType funcType = new FuncType(returnValueType, parameterTypes);
+        irUtils.makeFunction(IrMaker.inheritedName, funcType, false);
+        irSymbolTableStack.putSymbolToGlobal(IrMaker.inheritedName, IrMaker.currentFunction);
+
+        irSymbolTableStack.push(new IrSymbolTable());
+
+        if (funcFParams != null) {
+            buildFuncFParamsIr(funcFParams);
+        }
+
+        irUtils.makeBasicBlock();
+
+        buildBlockIr(block);
+
+        // 这里缺一个对无返回值函数的return处理
+        irSymbolTableStack.pop();
+    }
+
+    public void buildFuncFParamsIr(FuncFParams funcFParams) {
+        for (int i = 0; i < funcFParams.getFuncFParams().size(); i++) {
+            // buildFuncFParamIr(funcFParam);
+            // 不必在 buildFuncFParamIr(funcFParam); 逐个构建了, 那样会缺失当前索引, 直接在这个里面构建吧
+            // void func(int a, int b) {
+            //
+            // }
+            // define dso_local void @func(i32 %a0, i32 %a1) {
+            // b0:
+            //     %v2 = alloca i32
+            //     %v1 = alloca i32
+            //     store i32 %a0, i32* %v1
+            //     store i32 %a1, i32* %v2
+            //     ret void
+            // }
+            FuncFParam funcFParam = funcFParams.getFuncFParams().get(i);
+            IrMaker.comprehensiveVarName = funcFParam.getIdent().getKey();
+            ValueType paramValueType = funcFParam.getIdent().getValue() == TokenType.INTTK ? I32 : VoidType;
+            if (funcFParam.isArray()) {
+                paramValueType = new PointerType(paramValueType);
+            }
+            Alloca alloca = irUtils.makeAlloca(paramValueType);
+            irSymbolTableStack.putSymbolToCurScope(IrMaker.comprehensiveVarName, alloca);
+
+            // 把形参存储到alloca分配的空间当中
+            Value curArg = IrMaker.currentFunction.getArgs().get(i);
+            irUtils.makeStore(curArg, alloca);
+        }
+    }
+
+    public void buildFuncFParamIr(FuncFParam funcFParam) {
+        // 暂时不用
+    }
+
+    public void buildBlockIr(Block block) {
+        ArrayList<BlockItem> blockItems = block.getBlockItems();
+        for (BlockItem blockItem : blockItems) {
+            buildBlockItemIr(blockItem);
+        }
+    }
+
+    public void buildBlockItemIr(BlockItem blockItem) {
+        Decl decl = blockItem.getDecl();
+        Stmt stmt = blockItem.getStmt();
+        if (decl != null) {
+            buildDeclIr(decl);
+        } else {
+            buildStmtIr(stmt);
+        }
+    }
+
+    public void buildStmtIr(Stmt stmt) {
+
+    }
+
+    public void buildMainFuncDefIr(MainFuncDef mainFuncDef) {
+        ValueType returnValueType = I32;
+        Block block = mainFuncDef.getBlock();
+        IrMaker.inheritedName = "main";   // 函数名
+
+        ArrayList<ValueType> parameterTypes = new ArrayList<>();    // 空参数列表
+
+        FuncType funcType = new FuncType(returnValueType, parameterTypes);
+        irUtils.makeFunction(IrMaker.inheritedName, funcType, false);
+
+        irSymbolTableStack.push(new IrSymbolTable());
+
+        irUtils.makeBasicBlock();
+
+        buildBlockIr(block);
+
+        irSymbolTableStack.pop();
+    }
+
+    public void initDelcaration() {
+        Function.getint = irUtils.makeFunction("getint", new FuncType(I32, new ArrayList<>()), true);
+        Function.putint = irUtils.makeFunction("putint", new FuncType(VoidType, new ArrayList<>(Collections.singleton(new IntType(32)))), true);
+        Function.putch = irUtils.makeFunction("putch", new FuncType(VoidType, new ArrayList<>(Collections.singleton(new IntType(32)))), true);
+        Function.putstr = irUtils.makeFunction("putstr", new FuncType(VoidType, new ArrayList<>(Collections.singleton(new PointerType(new IntType(8))))), true);
+        IrMaker.currentFunction = null;
+    }
+}

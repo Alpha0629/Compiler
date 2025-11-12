@@ -4,14 +4,13 @@ import llvm.types.ValueType;
 import llvm.values.Value;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 
 // <result> = load <ty>, <ty>* <pointer>
 public class Load extends Instruction {
     // valueType表示指针指向的类型
-    public Load(String name, ValueType valueType, Value parent, Value pointer) {
-        super(name, valueType, parent, new ArrayList<>(Collections.singletonList(pointer)));
+    public Load(String name, ValueType pointedType, Value parent, Value pointer) {
+        super(name, pointedType, parent, new ArrayList<>(Collections.singletonList(pointer)));
     }
 
     public Value getPointer() {

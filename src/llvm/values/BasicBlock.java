@@ -5,14 +5,17 @@ import llvm.types.ValueType;
 import llvm.values.instructions.Instruction;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 
 public class BasicBlock extends Value {
     private final ArrayList<Instruction> instructions;
+    private final HashSet<Instruction> instructionSet;
 
     public BasicBlock(String name, LabelType labelType, Value parent) {
         // 保证是label型的标签
         super("%b" + name, labelType, parent);
         this.instructions = new ArrayList<>();
+        this.instructionSet = new HashSet<>();
     }
 
     public ArrayList<Instruction> getInstructions() {
@@ -20,11 +23,21 @@ public class BasicBlock extends Value {
     }
 
     public void addInstructionToTail(Instruction instruction) {
-        instructions.add(instruction);
+        if (!instructionSet.contains(instruction)) {
+            instructionSet.add(instruction);
+            instructions.add(instruction);
+        } else {
+            System.out.println("警告：重复添加相同的指令");
+        }
     }
 
     public void addInstructionToHead(Instruction instruction) {
-        instructions.add(0, instruction);
+        if (!instructionSet.contains(instruction)) {
+            instructionSet.add(instruction);
+            instructions.add(0, instruction);
+        } else {
+            System.out.println("警告：重复添加相同的指令");
+        }
     }
 
     @Override

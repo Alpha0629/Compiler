@@ -1,6 +1,6 @@
 package llvm;
 
-import frontend.Visitor.SymbolTable;
+import llvm.values.Value;
 
 import java.util.Stack;
 
@@ -8,21 +8,35 @@ import java.util.Stack;
  * {@code @Description} Ir栈式符号表
  */
 public class IrSymbolTableStack {
-    private final Stack<SymbolTable> irSymbolTableStack;
+    private final Stack<IrSymbolTable> irSymbolTableStack;
 
     public IrSymbolTableStack() {
         this.irSymbolTableStack = new Stack<>();
+        IrSymbolTable currentSymbolTable = new IrSymbolTable();
+        this.push(currentSymbolTable);
     }
 
-    public void push(SymbolTable symbolTable) {
-        irSymbolTableStack.push(symbolTable);
+    public void push(IrSymbolTable irSymbolTable) {
+        irSymbolTableStack.push(irSymbolTable);
     }
 
-    public SymbolTable pop() {
+    public IrSymbolTable pop() {
         return irSymbolTableStack.pop();
     }
 
-    public SymbolTable top() {
+    public IrSymbolTable top() {
         return irSymbolTableStack.peek();
+    }
+
+    public void putSymbolToGlobal(String name, Value value) {
+        irSymbolTableStack.get(0).putSymbol(name, value);
+    }
+
+    public void putSymbolToCurScope(String name, Value value) {
+        top().putSymbol(name, value);
+    }
+
+    public boolean inGlobalScope() {
+        return irSymbolTableStack.size() == 1;
     }
 }

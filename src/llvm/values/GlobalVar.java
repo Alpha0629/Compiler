@@ -9,13 +9,16 @@ public class GlobalVar extends User {
     // @g_arr = dso_local global [5 x i32] [i32 12, i32 0, i32 0, i32 0, i32 0]
     // @g_ndarray = dso_local constant [4 x i32] zeroinitializer
     // @g_a = dso_local global i32 10
+    // @g.temp = internal global i32 9
     private final Boolean isConst;
+    private final Boolean isStatic;
     private final Constant constInit;
 
-    public GlobalVar(String name, ValueType valueType, boolean isConst, Constant constInit) {
+    public GlobalVar(String name, ValueType valueType, boolean isConst, boolean isStatic, Constant constInit) {
         // 保证ValueType是指针类型，指针指向的内容与consInit的类型保持一致，例如i32，[5 x i32]
         super("@g_" + name, valueType);
         this.isConst = isConst;
+        this.isStatic = isStatic;
         this.constInit = constInit;
     }
 
@@ -41,7 +44,11 @@ public class GlobalVar extends User {
         StringBuilder sb = new StringBuilder();
         sb.append(super.getName());
         sb.append(" = ");
-        sb.append("dso_local");
+        if (isStatic) {
+            sb.append("internal");
+        } else {
+            sb.append("dso_local");
+        }
         sb.append(" ");
         // 如果是数组常量，则输出"constant"
         // 反之，输出"global"
@@ -51,7 +58,7 @@ public class GlobalVar extends User {
             sb.append("global");
         }
         sb.append(" ");
-        sb.append(((PointerType)super.getValueType()).getPointedType().toString());
+        sb.append(((PointerType) super.getValueType()).getPointedType().toString());
         sb.append(" ");
         // 如果是赋值的是数组，并且数组是全0的，那么直接输出"zeroinitializer"
         // 反之，正常输出原始内容即可

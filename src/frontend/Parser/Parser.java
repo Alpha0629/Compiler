@@ -527,7 +527,7 @@ public class Parser {
         assert (now.getValue() == TokenType.LPARENT);
 
         now = getNextToken();
-        // assert(now.getValue() == TokenType.RPARENT);
+        // assert(now.getStoredValue() == TokenType.RPARENT);
         if (now.getValue() != TokenType.RPARENT) {
             addError(new Error(ErrorType.j, getLastToken().getLine()));
         } else {

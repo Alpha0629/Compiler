@@ -9,12 +9,12 @@ import java.util.Arrays;
 // 将42这个值存储到ptr指向的地址
 // store i32 42, i32* %ptr
 public class Store extends Instruction {
-    public Store(ValueType valueType, Value parent, Value value, Value pointer) {
+    public Store(ValueType valueType, Value parent, Value storedValue, Value pointer) {
         // valueType必须是void
-        super(valueType, parent, new ArrayList<>(Arrays.asList(value, pointer)));
+        super(valueType, parent, new ArrayList<>(Arrays.asList(storedValue, pointer)));
     }
 
-    public Value getValue() {
+    public Value getStoredValue() {
         return super.getOperands().get(0);
     }
 
@@ -27,9 +27,9 @@ public class Store extends Instruction {
         StringBuilder sb = new StringBuilder();
         sb.append("store");
         sb.append(" ");
-        sb.append(this.getValue().getValueType().toString());
+        sb.append(this.getStoredValue().getValueType().toString());
         sb.append(" ");
-        sb.append(this.getValue().getName());
+        sb.append(this.getStoredValue().getName());
         sb.append(", ");
         sb.append(this.getPointer().getValueType().toString());
         sb.append(" ");

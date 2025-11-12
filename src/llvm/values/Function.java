@@ -1,5 +1,6 @@
 package llvm.values;
 
+import llvm.types.FuncType;
 import llvm.types.IntType;
 import llvm.types.PointerType;
 import llvm.types.ValueType;
@@ -14,26 +15,41 @@ public class Function extends Value {
     // declare void @putint(i32)      ; 输出一个整数
     // declare void @putch(i32)       ; 输出一个字符
     // declare void @putstr(i8*)      ; 输出字符串
-    public static Function getint = new Function("getint", new IntType(32), new ArrayList<>(), true);
-    public static Function putint = new Function("putint", new VoidType(), new ArrayList<>(Collections.singleton(new IntType(32))), true);
-    public static Function putch = new Function("putch", new VoidType(), new ArrayList<>(Collections.singleton(new IntType(32))), true);
-    public static Function putstr = new Function("putstr", new VoidType(), new ArrayList<>(Collections.singleton(new PointerType(new IntType(8)))), true);
+//    public static Function getint = new Function("getint", new IntType(32), new ArrayList<>(), true);
+//    public static Function putint = new Function("putint", new VoidType(), new ArrayList<>(Collections.singleton(new IntType(32))), true);
+//    public static Function putch = new Function("putch", new VoidType(), new ArrayList<>(Collections.singleton(new IntType(32))), true);
+//    public static Function putstr = new Function("putstr", new VoidType(), new ArrayList<>(Collections.singleton(new PointerType(new IntType(8)))), true);
+
+    public static Function getint;
+    public static Function putint;
+    public static Function putch;
+    public static Function putstr;
 
     private final Boolean isDeclare;
+    private final ValueType returnValueType;
     private final ArrayList<ValueType> argTypes;
     private final ArrayList<Value> args;
     private final ArrayList<BasicBlock> blocks;
 
-    public Function(String name, ValueType returnType, ArrayList<ValueType> argTypes, boolean isDeclare) {
-        super("@" + name, returnType);
+    public Function(String name, FuncType funcType, boolean isDeclare) {
+        super("@" + name, funcType);
         this.isDeclare = isDeclare;
-        this.argTypes = argTypes;
-        this.args = makeArgs(argTypes, isDeclare);
+        this.returnValueType = funcType.getReturnType();
+        this.argTypes = funcType.getParameters();
+        this.args = makeArgs(funcType.getParameters(), isDeclare);
         this.blocks = new ArrayList<>();
     }
 
     public void addBlock(BasicBlock block) {
         blocks.add(block);
+    }
+
+    public BasicBlock getFirstBlock() {
+        if (!blocks.isEmpty()) return blocks.get(0);
+        else {
+            System.out.println("错误：当前函数不存在Block");
+            return null;
+        }
     }
 
     public ArrayList<Value> makeArgs(ArrayList<ValueType> argTypes, boolean isDeclare) {
@@ -49,6 +65,14 @@ public class Function extends Value {
         return args;
     }
 
+    public ArrayList<Value> getArgs() {
+        return args;
+    }
+
+    public ValueType getReturnType() {
+        return returnValueType;
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
@@ -57,7 +81,7 @@ public class Function extends Value {
             // declare void @putint(i32)      ; 输出一个整数
             sb.append("declare");
             sb.append(" ");
-            sb.append(super.getValueType());
+            sb.append(this.getReturnType().toString());
             sb.append(" ");
             sb.append(super.getName());
             sb.append("(");
@@ -81,7 +105,7 @@ public class Function extends Value {
             // }
             sb.append("define dso_local");
             sb.append(" ");
-            sb.append(super.getValueType());
+            sb.append(this.getReturnType().toString());
             sb.append(" ");
             sb.append(super.getName());
             sb.append("(");

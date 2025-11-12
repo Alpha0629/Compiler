@@ -562,7 +562,7 @@ public class Lexer {
             Token token = getToken();
             // 读到空指针说明是注释符，跳过即可
             if (token == null) continue;
-            if (token.getValue() == TokenType.EOF) {
+            if (token.getStoredValue() == TokenType.EOF) {
                 tokens.addToken(token);
                 break;
             }

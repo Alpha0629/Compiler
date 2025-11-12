@@ -1,6 +1,7 @@
 package frontend.Parser.Node;
 
 import frontend.Lexer.Token;
+import frontend.Lexer.TokenType;
 
 public class BType {
     private final Token bType;
@@ -11,6 +12,14 @@ public class BType {
 
     public Token getToken() {
         return bType;
+    }
+
+    public boolean isInt() {
+        return bType.getValue() == TokenType.INTTK;
+    }
+
+    public boolean isChar() {
+        return false;
     }
 
     @Override

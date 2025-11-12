@@ -10,7 +10,8 @@ import frontend.Parser.Node.CompUnit;
 import frontend.Parser.Parser;
 import frontend.Error.Error;
 import frontend.Visitor.Visitor;
-import llvm.IrBuilder;
+import llvm.IrMaker;
+import llvm.Module;
 
 public class Compiler {
     public static ArrayList<Error> errors = new ArrayList<>();
@@ -22,7 +23,8 @@ public class Compiler {
     public static Lexer lexer;
     public static Parser parser;
     public static Visitor visitor;
-    public static IrBuilder irBuilder;
+    public static IrMaker irBuilder;
+    public static Module module;
 
     public static void File2String() {
         try {
@@ -67,12 +69,14 @@ public class Compiler {
 
     public static void generateIrBuilder() {
         System.out.println("Generating ir builder");
-        irBuilder = new IrBuilder(AST);
+        irBuilder = new IrMaker(module, AST);
+        irBuilder.buildCompUnitIr();
+        System.out.println(module.toString());
     }
 
     public static void generateMips() {
         System.out.println("Generating Mips");
-        //
+
     }
 
     public static void main(String[] args) {

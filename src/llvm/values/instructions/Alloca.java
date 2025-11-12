@@ -1,5 +1,6 @@
 package llvm.values.instructions;
 
+import llvm.types.PointerType;
 import llvm.types.ValueType;
 import llvm.values.Value;
 import llvm.values.constants.ConstArray;
@@ -8,13 +9,13 @@ public class Alloca extends Instruction {
     // %v7 = alloca i32*
     private final ConstArray initArray;
 
-    public Alloca(String name, ValueType valueType, Value parent) {
-        super(name, valueType, parent);
+    public Alloca(String name, PointerType pointer, Value parent) {
+        super(name, pointer, parent);
         this.initArray = null;
     }
 
-    public Alloca(String name, ValueType valueType, Value parent, ConstArray constArray) {
-        super(name, valueType, parent);
+    public Alloca(String name, PointerType pointer, Value parent, ConstArray constArray) {
+        super(name, pointer, parent);
         this.initArray = constArray;
     }
 

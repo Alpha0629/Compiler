@@ -5,13 +5,12 @@ import llvm.types.VoidType;
 import llvm.values.Value;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 
 public class Ret extends Instruction {
     // ret <type> <value> | ret void
-    public Ret(ValueType valueType, Value parent, Value returnValue) {
-        super(valueType, parent, new ArrayList<>(Collections.singletonList(returnValue)));
+    public Ret(ValueType returnValueType, Value parent, Value returnValue) {
+        super(returnValueType, parent, new ArrayList<>(Collections.singletonList(returnValue)));
     }
 
     public Ret(ValueType valueType, Value parent) {

@@ -6,7 +6,7 @@ package llvm.types;
 public class PointerType extends ValueType {
     private final ValueType pointedType;    // 指针指向的类型
 
-    public PointerType(IntType pointedType) {
+    public PointerType(ValueType pointedType) {
         this.pointedType = pointedType;
     }
 
