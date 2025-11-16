@@ -1,5 +1,6 @@
 package llvm;
 
+import frontend.Lexer.Token;
 import frontend.Lexer.TokenType;
 import frontend.Parser.Node.BType;
 import frontend.Parser.Node.Block;
@@ -10,17 +11,35 @@ import frontend.Parser.Node.ConstDef;
 import frontend.Parser.Node.ConstInitVal;
 import frontend.Parser.Node.Decl;
 import frontend.Parser.Node.Exp.AddExp;
+import frontend.Parser.Node.Exp.Cond;
 import frontend.Parser.Node.Exp.ConstExp;
+import frontend.Parser.Node.Exp.EqExp;
 import frontend.Parser.Node.Exp.Exp;
+import frontend.Parser.Node.Exp.LAndExp;
+import frontend.Parser.Node.Exp.LOrExp;
 import frontend.Parser.Node.Exp.MulExp;
 import frontend.Parser.Node.Exp.PrimaryExp;
+import frontend.Parser.Node.Exp.RelExp;
 import frontend.Parser.Node.Exp.UnaryExp;
 import frontend.Parser.Node.FuncDef;
 import frontend.Parser.Node.FuncFParam;
 import frontend.Parser.Node.FuncFParams;
+import frontend.Parser.Node.FuncRParams;
 import frontend.Parser.Node.InitVal;
+import frontend.Parser.Node.LVal;
 import frontend.Parser.Node.MainFuncDef;
+import frontend.Parser.Node.Number;
+import frontend.Parser.Node.Statement.AssignmentStmt;
+import frontend.Parser.Node.Statement.BlockStmt;
+import frontend.Parser.Node.Statement.BreakStmt;
+import frontend.Parser.Node.Statement.ContinueStmt;
+import frontend.Parser.Node.Statement.ExpStmt;
+import frontend.Parser.Node.Statement.ForLoopStmt;
+import frontend.Parser.Node.Statement.IfStmt;
+import frontend.Parser.Node.Statement.PrintfStmt;
+import frontend.Parser.Node.Statement.ReturnStmt;
 import frontend.Parser.Node.Statement.Stmt;
+import frontend.Parser.Node.UnaryOp;
 import frontend.Parser.Node.VarDecl;
 import frontend.Parser.Node.VarDef;
 import llvm.types.ArrayType;
@@ -36,8 +55,11 @@ import llvm.values.Value;
 import llvm.values.constants.ConstArray;
 import llvm.values.constants.ConstInt;
 import llvm.values.constants.Constant;
+import llvm.values.instructions.Add;
 import llvm.values.instructions.Alloca;
 import llvm.values.instructions.Gep;
+import llvm.values.instructions.Icmp;
+import llvm.values.instructions.Mul;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -67,6 +89,9 @@ public class IrMaker {
     public static Value comprehensiveValue;
     public static ArrayList<ValueType> comprehensiveArgTypes;
     public static ValueType comprehensiveArgType;
+
+    public static BasicBlock trueBlock;
+    public static BasicBlock falseBlock;
 
     public static Value inheritedValue; // 继承属性(Value向下传递)
     public static String inheritedName; // 继承属性(变量的名字向下传递) (用于向Symbol中添加名字)
@@ -455,19 +480,311 @@ public class IrMaker {
     }
 
     public void buildAddExpIr(AddExp addExp) {
-
+        ArrayList<MulExp> mulExps = addExp.getMulExps();
+        ArrayList<Token> signs = addExp.getSigns();
+        if (IrMaker.compileTimeConstRead = Boolean.TRUE) {
+            // 可以求到具体的值
+            int value = 0;
+            for (int i = 0; i < mulExps.size(); i++) {
+                MulExp mulExp = mulExps.get(i);
+                buildMulExpIr(mulExp);
+                assert (IrMaker.comprehensiveConst instanceof ConstInt);// 求到了常数, 放在 comprehensiveConst
+                if (i == 0) {
+                    // 求到了常数, 放在 comprehensiveConst
+                    value = ((ConstInt) IrMaker.comprehensiveConst).getVal();
+                } else {
+                    if (signs.get(i - 1).getValue() == TokenType.AND) {
+                        // 加法
+                        value += ((ConstInt) IrMaker.comprehensiveConst).getVal();
+                    } else {
+                        // 减法
+                        value -= ((ConstInt) IrMaker.comprehensiveConst).getVal();
+                    }
+                }
+            }
+            IrMaker.comprehensiveConst = new ConstInt(I32, value);
+        } else {
+            // 无法求出具体的值
+            //
+        }
     }
 
     public void buildMulExpIr(MulExp mulExp) {
+        ArrayList<UnaryExp> unaryExps = mulExp.getUnaryExps();
+        ArrayList<Token> signs = mulExp.getSigns();
+        if (IrMaker.compileTimeConstRead = Boolean.TRUE) {
+            int value = 0;
+            for (int i = 0; i < unaryExps.size(); i++) {
+                UnaryExp unaryExp = unaryExps.get(i);
+                buildUnaryExpIr(unaryExp);
+                if (i == 0) {
+                    // 求到了常数, 放在 comprehensiveConst
+                    value = ((ConstInt) IrMaker.comprehensiveConst).getVal();
+                } else {
+                    if (signs.get(i - 1).getValue() == TokenType.MULT) {
+                        // 乘法
+                        value *= ((ConstInt) IrMaker.comprehensiveConst).getVal();
+                    } else if (signs.get(i - 1).getValue() == TokenType.DIV) {
+                        // 除法
+                        value /= ((ConstInt) IrMaker.comprehensiveConst).getVal();
+                    } else {
+                        // 取模
+                        value %= ((ConstInt) IrMaker.comprehensiveConst).getVal();
+                    }
+                }
+            }
+            IrMaker.comprehensiveConst = new ConstInt(I32, value);
+        } else {
 
+        }
     }
 
     public void buildUnaryExpIr(UnaryExp unaryExp) {
+        PrimaryExp primaryExp = unaryExp.getPrimaryExp();
+        UnaryExp unaryExpr = unaryExp.getUnaryExp();
+        UnaryOp unaryOp = unaryExp.getUnaryOp();
+        FuncRParams funcRParams = unaryExp.getFuncRParams();
+        Token funcName = unaryExp.getIdent();
+        if (IrMaker.compileTimeConstRead = Boolean.TRUE) {
+            // 必须能够读到常量
+            assert (funcRParams == null);
+            assert (funcName == null);
+            if (primaryExp != null) {
+                buildPrimaryExpIr(primaryExp);
+            } else {
+                buildUnaryExpIr(unaryExp);
+                // 得到了常数值
+                int value = ((ConstInt) IrMaker.comprehensiveConst).getVal();
+                if (unaryOp.getUnaryOp().getValue() == TokenType.PLUS) {
+                    // 保持不变
+                    IrMaker.comprehensiveConst = new ConstInt(I32, +value);
+                } else if (unaryOp.getUnaryOp().getValue() == TokenType.MINU) {
+                    // 取反
+                    IrMaker.comprehensiveConst = new ConstInt(I32, -value);
+                } else {
+                    // '!'仅出现在条件表达式中
+                    int bool = value >= 0 ? 0 : 1;
+                    IrMaker.comprehensiveConst = new ConstInt(I1, bool);
+                }
+            }
+        } else {
 
+        }
     }
 
     public void buildPrimaryExpIr(PrimaryExp primaryExp) {
+        Exp exp = primaryExp.getExp();
+        LVal lVal = primaryExp.getLVal();
+        Number number = primaryExp.getNumber();
+        if (IrMaker.compileTimeConstRead = Boolean.TRUE) {
+            if (exp != null) {
+                buildExpIr(exp);
+                // 常数存在了 IrMaker.comprehensiveConst
+            } else if (lVal != null) {
+                buildLValIr(lVal);
+                // 常数存在了 IrMaker.comprehensiveConst
+            } else {
+                buildNumber(number);
+                // 常数存在了 IrMaker.comprehensiveConst
+            }
+        } else {
 
+        }
+    }
+
+    public void buildLValIr(LVal lVal) {
+        Token ident = lVal.getIdent();
+        Exp exp = lVal.getExp();
+        Value curLValValue = irSymbolTableStack.findSymbol(ident.getKey()); // 在当前作用域的符号表或者全局符号表找到左值
+        // 首先以是否能读出常量为界限进行划分
+        if (IrMaker.compileTimeConstRead = Boolean.TRUE) {
+            // 说明这个变量是
+            // 1. int类型变量: 全局变量 or 全局常量 or 当前作用域静态变量 or 当前作用域常量
+            // 2. 数组类型变量: 全局变量数组 or 全局常量数组 or 当前作用域静态数组 or 当前作用域常量数组
+            if (curLValValue.getValueType() instanceof IntType) {
+                // 如果当前不是指针而是常量, 说明是左值是 const int
+                IrMaker.comprehensiveConst = (ConstInt) curLValValue;
+            } else {
+                // 剩下就是指针的情况
+                assert (curLValValue.getValueType() instanceof PointerType);
+                // 指针指向的内容
+                // 对于可以计算结果的情况, 指针指向的内容只能是Int型或者数组
+                ValueType pointerType = ((PointerType) curLValValue.getValueType()).getPointedType();
+                if (pointerType instanceof IntType) {
+                    // i32* --> i32
+                    // int a = 77;
+                    // int b = a;
+                    // @g_a = dso_local global i32 77
+                    // @g_b = dso_local global i32 77
+                    // 要么是全局变量要么是当前作用域静态变量
+                    // 获取GlobalVar的初始常数值
+                    IrMaker.comprehensiveConst = (ConstInt) (((GlobalVar) curLValValue).getConstInit());
+                } else if (pointerType instanceof ArrayType) {
+                    // [3 x i32]* --> [3 * i32]
+                    // int a[3] = {1, 2, 3};
+                    // int b = a[2];
+                    // @g_a = dso_local global [3 x i32] [i32 1, i32 2, i32 3]
+                    // @g_b = dso_local global i32
+                    assert (exp != null);   // 必然成立
+                    IrMaker.compileTimeConstRead = Boolean.TRUE;
+                    buildExpIr(exp);
+                    IrMaker.compileTimeConstRead = Boolean.FALSE;
+                    // 现在获取到了数组的索引, 例如a[2], 这个2就存储在 IrMaker.comprehensiveConst
+                    // 现在要通过索引来获取具体的值
+                    if (curLValValue instanceof GlobalVar) {
+                        // 如果是全局变量, 先获取数组的一系列常量, 然后再根据索引取对应的值放到 IrMaker.comprehensiveConst
+                        ArrayList<Constant> constants = ((ConstArray) ((GlobalVar) curLValValue).getConstInit()).getConstants();
+                        IrMaker.comprehensiveConst = constants.get(((ConstInt) comprehensiveConst).getVal());
+                    } else {
+                        // 局部的常量数组, 是用Alloca进行内存分配并store的
+                        assert (curLValValue instanceof Alloca);
+                        ArrayList<Constant> constants = ((Alloca) curLValValue).getInitArray().getConstants();
+                        IrMaker.comprehensiveConst = constants.get(((ConstInt) comprehensiveConst).getVal());
+                    }
+                } else {
+                    // 应该不存在这种情况
+                    assert false;
+                }
+            }
+        } else {
+            assert (curLValValue.getValueType() instanceof PointerType);
+            ValueType pointerType = ((PointerType) curLValValue.getValueType()).getPointedType();
+
+            if (pointerType instanceof IntType) {
+                // 指向int类型的变量, 直接返回结果即可
+                IrMaker.comprehensiveValue = curLValValue;
+            } else if (pointerType instanceof ArrayType) {
+                // 如果exp非空, 那么是一个数组的某个index
+                if (exp != null) {
+                    buildExpIr(exp);
+                    // IrMaker.comprehensiveValue = irUtils.makeGep();
+                }
+            } else if (pointerType instanceof PointerType) {
+
+            } else {
+                // 不存在这种情况
+                assert false;
+            }
+        }
+    }
+
+    public void buildCondIr(Cond cond) {
+        // trueBlock 和 falseBlock 已经在上层(Stmt)被设定好了
+        LOrExp lorExp = cond.getLOrExp();
+        buildLOrExpIr(lorExp);
+    }
+
+    public void buildLOrExpIr(LOrExp lorExp) {
+        // 消除左递归 LOrExp → LAndExp {'||' LAndExp}
+        ArrayList<LAndExp> lAndExps = lorExp.getLAndExps();
+        ArrayList<Token> signs = lorExp.getSigns();
+
+        if (signs.isEmpty()) {
+            // 仅有一个Cond, 直接求
+            // trueBlock 和 falseBlock 已经在上层(Stmt)被设定好了
+            buildLAndExpIr(lAndExps.get(0));
+        } else {
+            // 多个或并列, 需要实现短路求值
+            BasicBlock memory = IrMaker.falseBlock;
+            for (int i = 0; i < lAndExps.size() - 1; i++) {
+                // 遍历除了最有一个的所有Cond
+                IrMaker.falseBlock = irUtils.makeBasicBlock();  // 创建一个新的block, 同时currentBlock已经指向了这个新的基本块
+                buildLAndExpIr(lAndExps.get(i));
+            }
+            // 单独处理最后一个Cond
+            IrMaker.falseBlock = memory;    // 恢复falseBlock
+            buildLAndExpIr(lAndExps.get(lAndExps.size() - 1));
+        }
+    }
+
+    public void buildLAndExpIr(LAndExp landExp) {
+        // 消除左递归 LAndExp → EqExp {'&&' EqExp}
+        ArrayList<EqExp> eqExps = landExp.getEqExps();
+        ArrayList<Token> signs = landExp.getSigns();
+
+        if (signs.isEmpty()) {
+            buildEqExpIr(eqExps.get(0));
+            irUtils.makeBranch(comprehensiveValue, trueBlock, falseBlock);
+        } else {
+            BasicBlock memory = IrMaker.trueBlock;
+            for (int i = 0; i < eqExps.size() - 1; i++) {
+                buildEqExpIr(eqExps.get(i));
+                assert (IrMaker.comprehensiveValue instanceof Icmp);
+                BasicBlock nextBlock = irUtils.makeBasicBlock();
+                irUtils.makeBranch(comprehensiveValue, nextBlock, falseBlock);
+            }
+            IrMaker.trueBlock = memory;
+            buildEqExpIr(eqExps.get(eqExps.size() - 1));
+            irUtils.makeBranch(comprehensiveValue, trueBlock, falseBlock);
+        }
+    }
+
+    public void buildEqExpIr(EqExp eqExp) {
+        ArrayList<RelExp> relExps = eqExp.getRelExps();
+        ArrayList<Token> signs = eqExp.getSigns();
+
+        if (signs.isEmpty()) {
+            RelExp relExp = relExps.get(0);
+            // 证明relExp不等于0, relExp返回的是 I1 or I32
+            buildRelExpIr(relExp);
+            // 结果在 IrMaker.comprehensiveValue, 需要扩充成I32, 和0作比较
+            assert (comprehensiveValue.getValueType() instanceof IntType);
+            if (comprehensiveValue.getValueType().getBits() != I32.getBits()) {
+                comprehensiveValue = irUtils.makeZext(comprehensiveValue, I32);
+            }
+            comprehensiveValue = irUtils.makeIcmp(TokenType.NEQ, comprehensiveValue, C0);
+        } else {
+            Value memory = null;
+            // 至少有两个relExp, 即一定存在等号
+            for (int i = 0; i < relExps.size(); i++) {
+                // 先拿第一个和第二个进行比较, 第一个和第二个都是I1类型, 都需要转换成I32进行Icmp
+                // 得到的Icmp是I1类型, 再转换成I32, 然后和第三个I1 to I32的结果进行比较, Icmp得到I1
+                buildRelExpIr(relExps.get(i));
+                assert (comprehensiveValue.getValueType() instanceof IntType);
+                if (comprehensiveValue.getValueType().getBits() != I32.getBits()) {
+                    comprehensiveValue = irUtils.makeZext(comprehensiveValue, I32);
+                }
+                if (i == 0) {
+                    memory = comprehensiveValue;
+                } else if (i < relExps.size() - 1) {
+                    memory = irUtils.makeIcmp(signs.get(i - 1).getValue(), memory, comprehensiveValue);
+                    memory = irUtils.makeZext(memory, I32);  // 扩充成I32
+                } else {
+                    comprehensiveValue = irUtils.makeIcmp(signs.get(i - 1).getValue(), memory, comprehensiveValue);
+                }
+            }
+        }
+    }
+
+    public void buildRelExpIr(RelExp relExp) {
+        ArrayList<AddExp> addExps = relExp.getAddExps();
+        ArrayList<Token> signs = relExp.getSigns();
+
+        if (signs.isEmpty()) {
+            AddExp addExp = addExps.get(0);
+            buildAddExpIr(addExp);
+            // 结果在 IrMaker.comprehensiveValue, 一定是I32
+            // 直接返回
+        } else {
+            Value memory = null;
+            for (int i = 0; i < addExps.size(); i++) {
+                buildAddExpIr(addExps.get(i));
+                // I32
+                if (i == 0) {
+                    memory = comprehensiveValue;
+                } else if (i < addExps.size() - 1) {
+                    memory = irUtils.makeIcmp(signs.get(i - 1).getValue(), memory, comprehensiveValue);
+                    memory = irUtils.makeZext(memory, I32); // 扩充成32
+                } else {
+                    comprehensiveValue = irUtils.makeIcmp(signs.get(i - 1).getValue(), memory, comprehensiveValue);
+                }
+            }
+        }
+    }
+
+    public void buildNumber(Number number) {
+        int val = Integer.parseInt(number.getIntConst().getKey());
+        IrMaker.comprehensiveConst = new ConstInt(I32, val);
     }
 
     public void buildFuncDefIr(FuncDef funcDef) {
@@ -563,7 +880,31 @@ public class IrMaker {
     }
 
     public void buildStmtIr(Stmt stmt) {
+        if (stmt instanceof AssignmentStmt) {
+            // LVal '=' Exp
+            AssignmentStmt assignmentStmt = (AssignmentStmt) stmt;
+            LVal lVal = assignmentStmt.getLVal();
+            buildLValIr(lVal);
+            Exp exp = assignmentStmt.getExp();
 
+
+        } else if (stmt instanceof ExpStmt) {
+            ExpStmt expStmt = (ExpStmt) stmt;
+        } else if (stmt instanceof BlockStmt) {
+            BlockStmt blockStmt = (BlockStmt) stmt;
+        } else if (stmt instanceof IfStmt) {
+            IfStmt ifStmt = (IfStmt) stmt;
+        } else if (stmt instanceof ForLoopStmt) {
+            ForLoopStmt forLoopStmt = (ForLoopStmt) stmt;
+        } else if (stmt instanceof BreakStmt) {
+            BreakStmt breakStmt = (BreakStmt) stmt;
+        } else if (stmt instanceof ContinueStmt) {
+            ContinueStmt continueStmt = (ContinueStmt) stmt;
+        } else if (stmt instanceof ReturnStmt) {
+            ReturnStmt returnStmt = (ReturnStmt) stmt;
+        } else {
+            PrintfStmt printfStmt = (PrintfStmt) stmt;
+        }
     }
 
     public void buildMainFuncDefIr(MainFuncDef mainFuncDef) {
@@ -587,9 +928,17 @@ public class IrMaker {
 
     public void initDelcaration() {
         Function.getint = irUtils.makeFunction("getint", new FuncType(I32, new ArrayList<>()), true);
-        Function.putint = irUtils.makeFunction("putint", new FuncType(VoidType, new ArrayList<>(Collections.singleton(new IntType(32)))), true);
-        Function.putch = irUtils.makeFunction("putch", new FuncType(VoidType, new ArrayList<>(Collections.singleton(new IntType(32)))), true);
-        Function.putstr = irUtils.makeFunction("putstr", new FuncType(VoidType, new ArrayList<>(Collections.singleton(new PointerType(new IntType(8))))), true);
+        irSymbolTableStack.putSymbolToGlobal("getint", Function.getint);
+
+        Function.putint = irUtils.makeFunction("putint", new FuncType(VoidType, new ArrayList<>(Collections.singleton(I32))), true);
+        irSymbolTableStack.putSymbolToGlobal("putint", Function.putint);
+
+        Function.putch = irUtils.makeFunction("putch", new FuncType(VoidType, new ArrayList<>(Collections.singleton(I32))), true);
+        irSymbolTableStack.putSymbolToGlobal("putch", Function.putch);
+
+        Function.putstr = irUtils.makeFunction("putstr", new FuncType(VoidType, new ArrayList<>(Collections.singleton(new PointerType(I8)))), true);
+        irSymbolTableStack.putSymbolToGlobal("putstr", Function.putstr);
+
         IrMaker.currentFunction = null;
     }
 }

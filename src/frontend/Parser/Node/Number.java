@@ -9,6 +9,10 @@ public class Number {
     public Number(Token intConst) {
         this.intConst = intConst;
     }
+
+    public Token getIntConst() {
+        return intConst;
+    }
     
     @Override
     public String toString() {

@@ -21,7 +21,7 @@ public class Icmp extends Instruction {
 
     private final Cmp cmp;
 
-    public Icmp(String name, ValueType valueType, Value parent, Token cond, Value leftOperand, Value rightOperand) {
+    public Icmp(String name, ValueType valueType, Value parent, TokenType cond, Value leftOperand, Value rightOperand) {
         super(name, valueType, parent, new ArrayList<>(Arrays.asList(leftOperand, rightOperand)));
         this.cmp = token2Cmp(cond);
     }
@@ -38,8 +38,8 @@ public class Icmp extends Instruction {
         return cmp;
     }
 
-    private Cmp token2Cmp(Token cond) {
-        return switch (cond.getValue()) {
+    private Cmp token2Cmp(TokenType cond) {
+        return switch (cond) {
             case EQL -> Cmp.EQ;
             case NEQ -> Cmp.NE;
             case LSS -> Cmp.SLT;

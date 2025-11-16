@@ -32,11 +32,23 @@ public class IrSymbolTableStack {
         irSymbolTableStack.get(0).putSymbol(name, value);
     }
 
+    public IrSymbolTable root() {
+        return irSymbolTableStack.get(0);
+    }
+
     public void putSymbolToCurScope(String name, Value value) {
         top().putSymbol(name, value);
     }
 
     public boolean inGlobalScope() {
         return irSymbolTableStack.size() == 1;
+    }
+
+    public Value findSymbol(String name) {
+        Value value = this.top().getSymbol(name);
+        if (value != null) return value;
+        value = this.root().getSymbol(name);
+        assert value != null;
+        return value;
     }
 }

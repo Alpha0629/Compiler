@@ -1,6 +1,7 @@
 package llvm;
 
 import frontend.Lexer.Token;
+import frontend.Lexer.TokenType;
 import llvm.types.ArrayType;
 import llvm.types.FuncType;
 import llvm.types.IntType;
@@ -175,21 +176,19 @@ public class IrUtils {
         return store;
     }
 
-    public Trunc makeTrunc(Value operand) {
-        ValueType expectedValueType = operand.getValueType();
-        Trunc trunc = new Trunc(String.valueOf(nameCount++), expectedValueType, IrMaker.currentBlock, operand);
+    public Trunc makeTrunc(Value operand, ValueType goalType) {
+        Trunc trunc = new Trunc(String.valueOf(nameCount++), goalType, IrMaker.currentBlock, operand);
         IrMaker.currentBlock.addInstructionToTail(trunc);
         return trunc;
     }
 
-    public Zext makeZext(Value operand) {
-        ValueType expectedValueType = operand.getValueType();
-        Zext zext = new Zext(String.valueOf(nameCount++), expectedValueType, IrMaker.currentBlock, operand);
+    public Zext makeZext(Value operand, ValueType goalType) {
+        Zext zext = new Zext(String.valueOf(nameCount++), goalType, IrMaker.currentBlock, operand);
         IrMaker.currentBlock.addInstructionToTail(zext);
         return zext;
     }
 
-    public Icmp makeIcmp(Token cond, Value leftOp, Value rightOp) {
+    public Icmp makeIcmp(TokenType cond, Value leftOp, Value rightOp) {
         IntType intType = new IntType(1);
         Icmp icmp = new Icmp(String.valueOf(nameCount++), intType, IrMaker.currentBlock, cond, leftOp, rightOp);
         IrMaker.currentBlock.addInstructionToTail(icmp);

@@ -9,6 +9,10 @@ public class UnaryOp {
     public UnaryOp(Token unaryOp) {
         this.unaryOp = unaryOp;
     }
+
+    public Token getUnaryOp() {
+        return unaryOp;
+    }
     
     
     @Override
