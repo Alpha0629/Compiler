@@ -33,7 +33,7 @@ public class Ret extends Instruction {
         } else {
             sb.append(super.getValueType().toString());
             sb.append(" ");
-            sb.append(this.getReturnValue().toString());
+            sb.append(this.getReturnValue().getName());
             return sb.toString();
         }
     }

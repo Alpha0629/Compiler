@@ -9,12 +9,8 @@ public class ConstString extends Constant {
     public ConstString(ArrayType arrayType, String content) {
         // 是数组类型，数组内部应该是char类型
         super(arrayType);
-        this.content = replaceLineBreaks(content);
-    }
-
-    public String replaceLineBreaks(String content) {
-        // 把所有换行符都替换成\0A
-        return content.replace("\\0A", "\\n");
+        // this.content = replaceLineBreaks(content);
+        this.content = content;
     }
 
     public String getContent() {

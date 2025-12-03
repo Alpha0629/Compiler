@@ -29,9 +29,9 @@ public class Sdiv extends Instruction {
         sb.append(" ");
         sb.append(super.getValueType().toString());
         sb.append(" ");
-        sb.append(this.getLeftOperand());
+        sb.append(this.getLeftOperand().getName());
         sb.append(", ");
-        sb.append(this.getRightOperand());
+        sb.append(this.getRightOperand().getName());
         return sb.toString();
     }
 }

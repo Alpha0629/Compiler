@@ -30,11 +30,11 @@ public class LVal {
         // 对一个左值赋值，能被赋值的左值只有普通变量和数组
         // 要去符号表里面找这个ident
         SymbolTable curTable = Visitor.getSymbolTableStack().top();
-        System.out.println("当前变量名是：" + ident.getKey());
+        // System.out.println("当前变量名是：" + ident.getKey());
         while (curTable != null) {
             if (curTable.hasSymbol(ident.getKey())) {
                 Symbol symbol = curTable.getSymbol(ident.getKey());
-                System.out.println("匹配到的符号：" + symbol.getName());
+                // System.out.println("匹配到的符号：" + symbol.getName());
                 if (exp == null) return ((IntSymbol) symbol).isArray();
                 else return false;
             }

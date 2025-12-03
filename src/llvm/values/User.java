@@ -25,7 +25,7 @@ public class User extends Value {
     }
 
     public User(String name, ValueType valueType, Value parent) {
-        super("%v" + name, valueType, parent);
+        super(name, valueType, parent);
         this.operands = new ArrayList<>();
     }
 
@@ -61,9 +61,5 @@ public class User extends Value {
 
     public ArrayList<Value> getOperands() {
         return operands;
-    }
-
-    public void addOperand(Value operand) {
-        operands.add(operand);
     }
 }

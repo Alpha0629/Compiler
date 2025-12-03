@@ -2,9 +2,6 @@ package llvm.types;
 
 import java.util.ArrayList;
 
-/**
- * {@code @Description} 函数变量
- */
 public class FuncType extends ValueType {
     private final ValueType returnType;
     private final ArrayList<ValueType> parameters;

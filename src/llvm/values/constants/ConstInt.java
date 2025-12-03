@@ -17,6 +17,11 @@ public class ConstInt extends Constant {
     }
 
     @Override
+    public String getName() {
+        return this.toString();
+    }
+
+    @Override
     public String toString() {
         return String.valueOf(val);
     }

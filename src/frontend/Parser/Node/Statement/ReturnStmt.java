@@ -8,10 +8,20 @@ public class ReturnStmt implements Stmt {
     // 'return' [Exp] ';' // i
     private final Token Return;
     private final Exp exp;
+    private TokenType funcReturnType;
 
     public ReturnStmt(Token Return, Exp exp) {
         this.Return = Return;
         this.exp = exp;
+        this.funcReturnType = null;
+    }
+
+    public void setFuncReturnType(TokenType funcReturnType) {
+        this.funcReturnType = funcReturnType;
+    }
+
+    public TokenType getFuncReturnType() {
+        return funcReturnType;
     }
 
     public Exp getExp() {

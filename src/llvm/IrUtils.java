@@ -38,9 +38,6 @@ import llvm.values.instructions.Zext;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-/**
- * {@code @Description} Ir工具类, 用于生成一系列value
- */
 public class IrUtils {
     private final Module module;
     private final IrSymbolTableStack irSymbolTableStack;
@@ -59,7 +56,7 @@ public class IrUtils {
     // %v3的类型是i32*
     public Gep makeGep(Value pointer, Value offset) {
         PointerType resultType = (PointerType) pointer.getValueType();
-        Gep gep = new Gep(String.valueOf(stringCount++), resultType, IrMaker.currentBlock, pointer, offset);
+        Gep gep = new Gep(String.valueOf(nameCount++), resultType, IrMaker.currentBlock, pointer, offset);
         IrMaker.currentBlock.addInstructionToTail(gep);
         return gep;
     }
@@ -71,7 +68,7 @@ public class IrUtils {
         ArrayType arrayType = (ArrayType) (((PointerType) pointer.getValueType()).getPointedType());
         // 这里new PointerType() 传入的参数是i8
         PointerType resultType = new PointerType(arrayType.getElementType());
-        Gep gep = new Gep(String.valueOf(stringCount++), resultType, IrMaker.currentBlock, pointer, left, right);
+        Gep gep = new Gep(String.valueOf(nameCount++), resultType, IrMaker.currentBlock, pointer, left, right);
         IrMaker.currentBlock.addInstructionToTail(gep);
         return gep;
     }
@@ -80,10 +77,11 @@ public class IrUtils {
         if (globalStringMap.containsKey(content)) {
             return globalStringMap.get(content);
         }
-        int length = content.length();
+        int length = content.replace("\\0A", "1").length() + 1;
         ArrayType arrayType = new ArrayType(new IntType(8), length);
+        PointerType pointerType = new PointerType(arrayType);
         ConstString constString = new ConstString(arrayType, content);
-        GlobalString globalString = new GlobalString(String.valueOf(stringCount++), arrayType, constString);
+        GlobalString globalString = new GlobalString(String.valueOf(stringCount++), pointerType, constString);
         globalStringMap.put(content, globalString);
         module.addConstString(globalString);
         return globalString;
@@ -92,7 +90,15 @@ public class IrUtils {
     public GlobalVar makeGlobalVar(String name, Constant constant, boolean isConst, boolean isStatic) {
         ValueType valueType = constant.getValueType();
         PointerType pointerType = new PointerType(valueType);
-        GlobalVar globalVar = new GlobalVar(name, pointerType, isConst, isStatic, constant);
+        String realName;
+        if (isStatic) {
+            String funcName = IrMaker.inheritedName;
+            realName = "@s_" + funcName + "." + name;
+            if (IrMaker.blockDeepth > 1) realName += "." + (IrMaker.blockDeepth - 1);
+        } else {
+            realName = "@g_" + name;
+        }
+        GlobalVar globalVar = new GlobalVar(realName, pointerType, isConst, isStatic, constant);
         module.addGlobalVar(globalVar);
         return globalVar;
     }
@@ -104,10 +110,10 @@ public class IrUtils {
         return function;
     }
 
-    public BasicBlock makeBasicBlock() {
+    public BasicBlock makeBasicBlock(boolean updateCurrentBlock) {
         BasicBlock basicBlock = new BasicBlock(String.valueOf(nameCount++), new LabelType(), IrMaker.currentFunction);
         IrMaker.currentFunction.addBlock(basicBlock);
-        IrMaker.currentBlock = basicBlock;
+        if (updateCurrentBlock) IrMaker.currentBlock = basicBlock;
         return basicBlock;
     }
 
@@ -142,7 +148,7 @@ public class IrUtils {
 
     public Call makeCall(Function function, ArrayList<Value> args) {
         Call call;
-        ValueType returnType = function.getValueType();
+        ValueType returnType = function.getReturnType();
         if (returnType instanceof VoidType) call = new Call(new VoidType(), IrMaker.currentBlock, function, args);
         else call = new Call(String.valueOf(nameCount++), returnType, IrMaker.currentBlock, function, args);
         IrMaker.currentBlock.addInstructionToTail(call);
@@ -242,5 +248,22 @@ public class IrUtils {
         Or or = new Or(String.valueOf(nameCount++), intType, IrMaker.currentBlock, leftOp, rightOp);
         IrMaker.currentBlock.addInstructionToTail(or);
         return or;
+    }
+
+    public ArrayList<String> splitConstString(String origin) {
+        ArrayList<String> strings = new ArrayList<>();
+        String originString = origin.substring(1, origin.length() - 1);     // 去掉最前面和最后面的双引号
+        originString = originString.replace("\\n", "\\0A"); // 替换掉所有的换行符
+        // 下面要以%d为界把字符串分开
+        int last = 0;
+        for (int i = 0; i < originString.length(); i++) {
+            if (originString.startsWith("%d", i)) {
+                if (last != i) strings.add(originString.substring(last, i));    // 如果是%d%d, 不进行判断会导致添加空串
+                strings.add("%d");
+                last = i + 2;
+            }
+        }
+        if (last != originString.length()) strings.add(originString.substring(last));   // 如果结尾是%d, 同样会导致空串
+        return strings;
     }
 }

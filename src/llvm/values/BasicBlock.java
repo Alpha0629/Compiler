@@ -1,5 +1,7 @@
 package llvm.values;
 
+import llvm.IrMaker;
+import llvm.IrUtils;
 import llvm.types.LabelType;
 import llvm.types.ValueType;
 import llvm.values.instructions.Instruction;
@@ -23,6 +25,7 @@ public class BasicBlock extends Value {
     }
 
     public void addInstructionToTail(Instruction instruction) {
+        // if (IrMaker.currentBlock == IrMaker.garbageBlock) return;
         if (!instructionSet.contains(instruction)) {
             instructionSet.add(instruction);
             instructions.add(instruction);
@@ -32,6 +35,12 @@ public class BasicBlock extends Value {
     }
 
     public void addInstructionToHead(Instruction instruction) {
+        if (IrMaker.currentBlock == IrMaker.garbageBlock) {
+            // 如果已经return了, 不要把alloca添加到头部
+            // System.out.println(instruction);
+            IrUtils.nameCount--;
+            return;
+        }
         if (!instructionSet.contains(instruction)) {
             instructionSet.add(instruction);
             instructions.add(0, instruction);
@@ -47,6 +56,7 @@ public class BasicBlock extends Value {
         //     call void @putstr(i8*  %v10)
         //     ret i32 0
         StringBuilder sb = new StringBuilder();
+        // sb.append(super.getName());
         sb.append(super.getName().substring(1));
         sb.append(":");
         sb.append('\n');

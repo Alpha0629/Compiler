@@ -1,12 +1,10 @@
 package llvm;
 
+import llvm.values.Function;
 import llvm.values.Value;
 
 import java.util.Stack;
 
-/**
- * {@code @Description} Ir栈式符号表
- */
 public class IrSymbolTableStack {
     private final Stack<IrSymbolTable> irSymbolTableStack;
 
@@ -45,10 +43,13 @@ public class IrSymbolTableStack {
     }
 
     public Value findSymbol(String name) {
-        Value value = this.top().getSymbol(name);
-        if (value != null) return value;
-        value = this.root().getSymbol(name);
-        assert value != null;
-        return value;
+        // 必定能找到
+        for (int i = irSymbolTableStack.size() - 1; i >= 0; i--) {
+            IrSymbolTable irSymbolTable = irSymbolTableStack.get(i);
+            if (irSymbolTable.hasSymbol(name)) {
+                return irSymbolTable.getSymbol(name);
+            }
+        }
+        return null;
     }
 }

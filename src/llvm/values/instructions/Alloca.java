@@ -30,7 +30,7 @@ public class Alloca extends Instruction {
         sb.append(" = ");
         sb.append("alloca");
         sb.append(" ");
-        sb.append(super.getValueType().toString());
+        sb.append(((PointerType)super.getValueType()).getPointedType().toString());
         return sb.toString();
     }
 }

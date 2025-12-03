@@ -1,8 +1,5 @@
 package llvm.types;
 
-/**
- * {@code @Description} Int变量
- */
 public class IntType extends ValueType {
     private final int bits;
     private final int bytes;

@@ -1,8 +1,5 @@
 package llvm.types;
 
-/**
- * {@code @Description} 数组变量
- */
 public class ArrayType extends ValueType {
     private final IntType elementType;
     private final int length;

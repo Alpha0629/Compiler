@@ -30,6 +30,10 @@ public class SymbolTable {
         this.symbols = new LinkedHashMap<>();
     }
 
+    public LinkedHashMap<String, Symbol> getSymbols() {
+        return symbols;
+    }
+
     public int getScopeId() {
         return scopeId;
     }

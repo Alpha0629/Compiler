@@ -9,19 +9,19 @@ import java.util.ArrayList;
 public class Instruction extends User {
     // 与User功能一致，针对各个指令
     public Instruction(String name, ValueType valueType, Value parent, ArrayList<Value> operands) {
-        super("%v" + name, valueType, parent, operands);
+        super("%var" + name, valueType, parent, operands);
     }
 
     public Instruction(String name, ValueType valueType, Value parent) {
-        super("%v" + name, valueType, parent);
+        super("%var" + name, valueType, parent);
     }
 
     public Instruction(String name, ValueType valueType, ArrayList<Value> operands) {
-        super("%v" + name, valueType, operands);
+        super("%var" + name, valueType, operands);
     }
 
     public Instruction(String name, ValueType valueType) {
-        super("%v" + name, valueType);
+        super("%var" + name, valueType);
     }
 
     public Instruction(ValueType valueType, Value parent, ArrayList<Value> operands) {

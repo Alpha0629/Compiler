@@ -58,20 +58,23 @@ public class Compiler {
         System.out.println("Generating parser");
         parser = new Parser(tokens, "parser.txt", errorPath, errors);
         AST = parser.parse();
-        parser.outputInFile();
+        // parser.outputInFile();
     }
 
     public static void generateVisitor() {
         System.out.println("Generating visitor");
         visitor = new Visitor(AST, "symbol.txt", errorPath, errors);
         visitor.visit();
+        // visitor.outputInFile();
     }
 
     public static void generateIrBuilder() {
         System.out.println("Generating ir builder");
-        irBuilder = new IrMaker(module, AST);
+        module = new Module();
+        irBuilder = new IrMaker(module, AST, "llvm_ir.txt");
         irBuilder.buildCompUnitIr();
-        System.out.println(module.toString());
+        irBuilder.outputInFile();
+        // System.out.println(module.toString());
     }
 
     public static void generateMips() {
@@ -87,7 +90,7 @@ public class Compiler {
         generateVisitor();
         if (errors.isEmpty()) {
             generateIrBuilder();
-            generateMips();
+            // generateMips();
         } else {
             outputErrorInFile();
         }

@@ -4,9 +4,6 @@ import llvm.values.Value;
 
 import java.util.HashMap;
 
-/**
- * {@code @Description} Ir符号表
- */
 public class IrSymbolTable {
     private final HashMap<String, Value> symbols;
 

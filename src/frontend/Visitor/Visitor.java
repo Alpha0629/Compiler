@@ -2,6 +2,7 @@ package frontend.Visitor;
 
 import frontend.Error.ErrorType;
 import frontend.Lexer.Token;
+import frontend.Lexer.TokenType;
 import frontend.Parser.Node.BType;
 import frontend.Parser.Node.Block;
 import frontend.Parser.Node.BlockItem;
@@ -52,6 +53,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.Stack;
 
 public class Visitor {
@@ -320,6 +322,7 @@ public class Visitor {
             judgeLoop(token);
         } else if (stmt instanceof ReturnStmt) {
             // | 'return' [Exp] ';' // f
+            ((ReturnStmt) stmt).setFuncReturnType(findFuncTokenType()); // 直接在栈上找这个return语句对应的函数的返回值, 为代码生成做准备
             Token Return = ((ReturnStmt) stmt).getToken();
             Exp exp = ((ReturnStmt) stmt).getExp();
             judgeMismatchedReturnValue(Return, exp);
@@ -473,7 +476,7 @@ public class Visitor {
     public void judgeRedefinition(Token ident) {
         SymbolTable curSymbolTable = symbolTableStack.top();
         String name = ident.getKey();
-        if(curSymbolTable.hasSymbol(name)) {
+        if (curSymbolTable.hasSymbol(name)) {
             addError(new Error(ErrorType.b, ident.getLine()));    // 报错行号 Ident 所在行数
         }
     }
@@ -563,7 +566,7 @@ public class Visitor {
         Token ident = lVal.getIdent();
         while (curSymbolTable != null) {
             if (curSymbolTable.hasSymbol(ident.getKey())) {
-                System.out.println(curSymbolTable.getScopeId());
+                // System.out.println(curSymbolTable.getScopeId());
                 IntSymbol symbol = (IntSymbol) curSymbolTable.getSymbol(ident.getKey());
                 if (symbol.isConst()) {
                     addError(new Error(ErrorType.h, ident.getLine()));
@@ -606,12 +609,12 @@ public class Visitor {
         int size = funcRParams.getExps().size();
         assert (size == funcSymbol.getCount());
         ArrayList<Exp> exps = funcRParams.getExps();
-        System.out.println(name);
+        // System.out.println(name);
         for (int i = 0; i < size; i++) {
             IntSymbol curSymbol = (IntSymbol) funcSymbol.getParams().get(i);    // 第i个已经确定的形参
             SymbolType symbolType = curSymbol.getType();    // 必定是INT
             boolean isArray = curSymbol.isArray();  // dim=1表示是数组形式的形参
-            System.out.println(exps.get(i).isArray() + " " + isArray + " " + curSymbol.getName());
+            // System.out.println(exps.get(i).isArray() + " " + isArray + " " + curSymbol.getName());
             // 现在要找到第i个实参, 也就是第i个
             Exp exp = exps.get(i);
             if (exp.isArray() != isArray) {
@@ -681,6 +684,34 @@ public class Visitor {
             }
         }
         return null;
+    }
+
+    public TokenType findFuncTokenType() {
+        SymbolTable curSymbolTable = symbolTableStack.top();
+        // System.out.println(curSymbolTable.getScopeId());
+        while (curSymbolTable != null) {
+            LinkedHashMap<String, Symbol> symbols = curSymbolTable.getSymbols();
+            for (Symbol symbol : symbols.values()) {
+                if (symbol instanceof FuncSymbol funcSymbol) {
+                    return funcSymbol.getReturnType() == ReturnType.Void ? TokenType.VOIDTK : TokenType.INTTK;
+                }
+            }
+            curSymbolTable = curSymbolTable.getFather();
+        }
+        // System.out.println("没有找到return语句所属的函数??");
+        return null;
+    }
+
+    public static boolean hasReturnAtEnd(FuncDef funcDef) {
+        // 如果这个函数的直接大括号内, 缺少return, 则返回false, 如果在函数最开始有return, 也代表true
+        Block block = funcDef.getBlock();
+        ArrayList<BlockItem> blockItems = block.getBlockItems();
+        for (BlockItem blockItem : blockItems) {
+            if (blockItem.getStmt() != null && blockItem.getStmt() instanceof ReturnStmt) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public void enterLoop() {

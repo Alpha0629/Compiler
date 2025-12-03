@@ -1,9 +1,9 @@
 package llvm.types;
 
-/**
- * {@code @Description} void类型
- */
 public class VoidType extends ValueType {
+    public VoidType() {
+
+    }
 
     @Override
     public String toString() {

@@ -1,8 +1,5 @@
 package llvm.types;
 
-/**
- * {@code @Description} 指针变量
- */
 public class PointerType extends ValueType {
     private final ValueType pointedType;    // 指针指向的类型
 

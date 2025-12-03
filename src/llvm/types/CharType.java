@@ -1,7 +1,5 @@
 package llvm.types;
 
-import llvm.values.User;
-
 public class CharType extends ValueType {
     private final int bits;
     private final int bytes;

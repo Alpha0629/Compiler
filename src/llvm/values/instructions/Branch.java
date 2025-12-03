@@ -64,7 +64,7 @@ public class Branch extends Instruction {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("branch");
+        sb.append("br");
         sb.append(" ");
         if (isConditionalJump) {
             sb.append(getCond().getValueType().toString());

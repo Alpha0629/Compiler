@@ -16,7 +16,7 @@ public class GlobalVar extends User {
 
     public GlobalVar(String name, ValueType valueType, boolean isConst, boolean isStatic, Constant constInit) {
         // 保证ValueType是指针类型，指针指向的内容与consInit的类型保持一致，例如i32，[5 x i32]
-        super("@g_" + name, valueType);
+        super(name, valueType);
         this.isConst = isConst;
         this.isStatic = isStatic;
         this.constInit = constInit;

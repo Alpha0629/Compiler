@@ -1,6 +1,5 @@
 package llvm.values.instructions;
 
-import frontend.Lexer.Token;
 import frontend.Lexer.TokenType;
 import llvm.types.ValueType;
 import llvm.values.Value;
@@ -11,12 +10,12 @@ import java.util.Arrays;
 public class Icmp extends Instruction {
     // %v18 = icmp sle i32 %v17, 21
     public enum Cmp {
-        EQ,  // ==
-        NE,  // !=
-        SLT, // <
-        SLE, // <=
-        SGT, // >
-        SGE, // >=
+        eq,  // ==
+        ne,  // !=
+        slt, // <
+        sle, // <=
+        sgt, // >
+        sge, // >=
     }
 
     private final Cmp cmp;
@@ -40,12 +39,12 @@ public class Icmp extends Instruction {
 
     private Cmp token2Cmp(TokenType cond) {
         return switch (cond) {
-            case EQL -> Cmp.EQ;
-            case NEQ -> Cmp.NE;
-            case LSS -> Cmp.SLT;
-            case LEQ -> Cmp.SLE;
-            case GRE -> Cmp.SGT;
-            case GEQ -> Cmp.SGE;
+            case EQL -> Cmp.eq;
+            case NEQ -> Cmp.ne;
+            case LSS -> Cmp.slt;
+            case LEQ -> Cmp.sle;
+            case GRE -> Cmp.sgt;
+            case GEQ -> Cmp.sge;
             default -> null;
         };
     }

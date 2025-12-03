@@ -23,6 +23,18 @@ public class IfStmt implements Stmt {
         return stmts;
     }
 
+    public boolean hasElse() {
+        return stmts.size() == 2;
+    }
+
+    public Stmt getHeadStmt() {
+        return stmts.get(0);
+    }
+
+    public Stmt getRearStmt() {
+        return stmts.get(1);
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();

@@ -120,7 +120,7 @@ public class Function extends Value {
             sb.append("{ ");
             sb.append('\n');
             for (int i = 0; i < blocks.size(); i++) {
-                if (i >= 1) sb.append('\n');
+                if (i >= 1) sb.append("\n\n");
                 sb.append(blocks.get(i).toString());
             }
             sb.append('\n');
