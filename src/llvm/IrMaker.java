@@ -74,7 +74,7 @@ import java.util.Queue;
 import java.util.Stack;
 
 public class IrMaker {
-    private final Module module;
+    private final IrModule module;
     private final IrUtils irUtils;
     private final CompUnit AST; // 语法分析得到的抽象语法树
     private final IrSymbolTableStack irSymbolTableStack;  // 符号表栈，每一个符号表代表一个作用区域
@@ -110,7 +110,7 @@ public class IrMaker {
 
     public static Stack<AbstractMap.SimpleEntry<BasicBlock, BasicBlock>> stackOfCycle = new Stack<>();
 
-    public IrMaker(Module module, CompUnit AST, String outputPath) {
+    public IrMaker(IrModule module, CompUnit AST, String outputPath) {
         this.module = module;
         this.irSymbolTableStack = new IrSymbolTableStack();
         this.irUtils = new IrUtils(this.module, this.irSymbolTableStack);

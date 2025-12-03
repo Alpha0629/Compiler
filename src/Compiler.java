@@ -4,6 +4,8 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Comparator;
 
+import backend.MipsMaker;
+import backend.MipsModule;
 import frontend.Lexer.Lexer;
 import frontend.Lexer.TokenList;
 import frontend.Parser.Node.CompUnit;
@@ -11,7 +13,7 @@ import frontend.Parser.Parser;
 import frontend.Error.Error;
 import frontend.Visitor.Visitor;
 import llvm.IrMaker;
-import llvm.Module;
+import llvm.IrModule;
 
 public class Compiler {
     public static ArrayList<Error> errors = new ArrayList<>();
@@ -24,7 +26,9 @@ public class Compiler {
     public static Parser parser;
     public static Visitor visitor;
     public static IrMaker irBuilder;
-    public static Module module;
+    public static IrModule irModule;
+    public static MipsMaker mipsMaker;
+    public static MipsModule mipsModule;
 
     public static void File2String() {
         try {
@@ -70,8 +74,8 @@ public class Compiler {
 
     public static void generateIrBuilder() {
         System.out.println("Generating ir builder");
-        module = new Module();
-        irBuilder = new IrMaker(module, AST, "llvm_ir.txt");
+        irModule = new IrModule();
+        irBuilder = new IrMaker(irModule, AST, "llvm_ir.txt");
         irBuilder.buildCompUnitIr();
         irBuilder.outputInFile();
         // System.out.println(module.toString());
@@ -79,7 +83,10 @@ public class Compiler {
 
     public static void generateMips() {
         System.out.println("Generating Mips");
-
+        mipsModule = new MipsModule();
+        mipsMaker = new MipsMaker(mipsModule, irModule, "mips.txt");
+        mipsMaker.buildMips();
+        mipsMaker.outputInFile();
     }
 
     public static void main(String[] args) {
@@ -90,7 +97,7 @@ public class Compiler {
         generateVisitor();
         if (errors.isEmpty()) {
             generateIrBuilder();
-            // generateMips();
+            generateMips();
         } else {
             outputErrorInFile();
         }

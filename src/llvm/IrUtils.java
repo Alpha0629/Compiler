@@ -1,6 +1,5 @@
 package llvm;
 
-import frontend.Lexer.Token;
 import frontend.Lexer.TokenType;
 import llvm.types.ArrayType;
 import llvm.types.FuncType;
@@ -39,14 +38,14 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class IrUtils {
-    private final Module module;
+    private final IrModule module;
     private final IrSymbolTableStack irSymbolTableStack;
     private final HashMap<String, GlobalString> globalStringMap;
 
     public static int nameCount = 0;
     public static int stringCount = 0;
 
-    public IrUtils(Module module, IrSymbolTableStack irSymbolTableStack) {
+    public IrUtils(IrModule module, IrSymbolTableStack irSymbolTableStack) {
         this.module = module;
         this.irSymbolTableStack = irSymbolTableStack;
         this.globalStringMap = new HashMap<>();

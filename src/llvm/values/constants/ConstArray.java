@@ -3,7 +3,6 @@ package llvm.values.constants;
 import llvm.types.ArrayType;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 
 public class ConstArray extends Constant {
     private final ArrayList<Constant> constants;
@@ -27,6 +26,10 @@ public class ConstArray extends Constant {
             }
         }
         return true;
+    }
+
+    public int getSize() {
+        return constants.size();
     }
 
     @Override

@@ -7,12 +7,12 @@ import llvm.values.GlobalString;
 
 import java.util.ArrayList;
 
-public class Module {
+public class IrModule {
     private final ArrayList<GlobalString> globalStrings;
     private final ArrayList<GlobalVar> globalVars;
     private final ArrayList<Function> functions;
 
-    public Module() {
+    public IrModule() {
         this.globalStrings = new ArrayList<>();
         this.globalVars = new ArrayList<>();
         this.functions = new ArrayList<>();
@@ -28,6 +28,18 @@ public class Module {
 
     public void addFunction(Function function) {
         this.functions.add(function);
+    }
+
+    public ArrayList<GlobalString> getGlobalStrings() {
+        return globalStrings;
+    }
+
+    public ArrayList<GlobalVar> getGlobalVars() {
+        return globalVars;
+    }
+
+    public ArrayList<Function> getFunctions() {
+        return functions;
     }
 
     @Override

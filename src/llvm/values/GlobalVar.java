@@ -3,6 +3,7 @@ package llvm.values;
 import llvm.types.PointerType;
 import llvm.types.ValueType;
 import llvm.values.constants.ConstArray;
+import llvm.values.constants.ConstInt;
 import llvm.values.constants.Constant;
 
 public class GlobalVar extends User {
@@ -37,6 +38,14 @@ public class GlobalVar extends User {
         } else {
             return false;
         }
+    }
+
+    public boolean isInteger() {
+        return this.constInit instanceof ConstInt;
+    }
+
+    public boolean isArray() {
+        return !isZeroInitializer() && !isInteger();
     }
 
     @Override
