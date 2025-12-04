@@ -6,6 +6,13 @@ import backend.MipsItem.MipsGV.MipsGlobalInteger;
 import backend.MipsItem.MipsGV.MipsGlobalString;
 import backend.MipsItem.MipsGV.MipsGlobalVariable;
 import backend.MipsItem.MipsGV.MipsZeroInitializer;
+import backend.instructions.alu.MipsAlu;
+import backend.instructions.alu.AluType;
+import backend.instructions.branch.BranchType;
+import backend.instructions.branch.MipsBranch;
+import backend.operand.Immediate;
+import backend.operand.Label;
+import backend.operand.Register;
 
 import java.util.ArrayList;
 
@@ -58,6 +65,15 @@ public class MipsModule {
         }
         sb.append("\n\n");
         sb.append(".text\n");
+
+        MipsAlu mipsAlu0 = new MipsAlu(AluType.SUBU, Register.K0, Register.A3, Register.V0);
+        MipsAlu mipsAlu1 = new MipsAlu(AluType.ADDIU, Register.T0, Register.A1, Immediate.Imm0);
+        sb.append("\t" + mipsAlu0.toString());
+        sb.append("\n");
+        sb.append("\t" + mipsAlu1.toString());
+        sb.append("\n");
+        MipsBranch mipsBranch = new MipsBranch(BranchType.BEQ, Register.S1, Register.A1, new Label("b0"));
+        sb.append("\t" + mipsBranch.toString());
         return sb.toString();
     }
 }
