@@ -33,6 +33,10 @@ public class Value {
         this.parent = null;
     }
 
+    public boolean withoutName() {
+        return this.name.isEmpty();
+    }
+
     public String getName() {
         return name;
     }

@@ -8,7 +8,7 @@ public class ArrayType extends ValueType {
     public ArrayType(IntType elementType, int length) {
         this.elementType = elementType;
         this.length = length;
-        this.bytes = length << 3;
+        this.bytes = length << 2;
     }
 
     @Override

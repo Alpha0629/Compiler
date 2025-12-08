@@ -2,6 +2,7 @@ package backend.instructions.mem;
 
 import backend.instructions.MipsInstruction;
 import backend.operand.Immediate;
+import backend.operand.Operand;
 import backend.operand.Register;
 
 public class Mipsmemory extends MipsInstruction {
@@ -12,18 +13,34 @@ public class Mipsmemory extends MipsInstruction {
     private final Immediate offset; // 偏移
     private final Register src; // 从哪里来
 
-    public Mipsmemory(MemoryType memoryType,Register dst, Immediate offset, Register src) {
+    public Mipsmemory(MemoryType memoryType, Register dst, Immediate offset, Register src) {
         this.memoryType = memoryType;
         this.dst = dst;
         this.offset = offset;
         this.src = src;
     }
 
+    public MemoryType getMemoryType() {
+        return memoryType;
+    }
+
+    public Register getDst() {
+        return dst;
+    }
+
+    public Operand getSrc() {
+        return src;
+    }
+
+    public Immediate getOffset() {
+        return offset;
+    }
+
     @Override
     public String toString() {
         return switch (memoryType) {
-            case LW -> "lw " + dst.toString() + ", " + offset.toString() + ", " + src.toString();
-            case SW -> "sw " + src.toString() + ", " + offset.toString() + ", " + dst.toString();
+            case LW -> "lw " + dst.toString() + ", " + offset.toString() + "(" + src.toString() + ")";
+            case SW -> "sw " + src.toString() + ", " + offset.toString() + "(" + dst.toString() + ")";
         };
     }
 

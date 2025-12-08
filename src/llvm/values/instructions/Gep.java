@@ -11,7 +11,8 @@ public class Gep extends Instruction {
     // <result> = getelementptr <ty>, ptr <ptrval>{, <ty> <idx>}*
     // %v26 = getelementptr inbounds [15 x i8], [15 x i8]* @str.1, i32 0, i32 0
     // %v3 = getelementptr inbounds i32, i32* %v2, i32 1
-    private final ValueType elementType;    // 指针所指向的元素的类型，例如[15 x i8]，i32
+    private final ValueType elementType;    // 指针所指向的元素的类型，例如[15 x i8], i32
+    private final int dimension;
 
     // 传入的valueType的表示的是result的类型
     public Gep(String name, ValueType valueType, Value parent, Value pointer, Value left, Value right) {
@@ -20,6 +21,7 @@ public class Gep extends Instruction {
         super(name, valueType, parent, new ArrayList<>(Arrays.asList(pointer, left, right)));
         // pointer一定是一个指针类型，现在要获取指针所指向的类型
         this.elementType = ((PointerType)(pointer.getValueType())).getPointedType();
+        this.dimension = 2;     // 本质是一维数组
     }
 
     // 传入的valueType的表示的是result的类型
@@ -28,6 +30,36 @@ public class Gep extends Instruction {
         super(name, valueType, parent, new ArrayList<>(Arrays.asList(pointer, index)));
         // pointer一定是一个指针类型，现在要获取指针所指向的类型
         this.elementType = ((PointerType)(pointer.getValueType())).getPointedType();
+        this.dimension = 1; // 本质是一维数组
+    }
+
+    public int getDimension() {
+        return dimension;
+    }
+
+    public Value getPointer() {
+        return super.getOperands().get(0);
+    }
+
+    public Value getIndex() {
+        if (dimension == 1) return  super.getOperands().get(1);
+        else {
+            throw new RuntimeException("dimension does not match");
+        }
+    }
+
+    public Value getLeftIndex() {
+        if (dimension == 2) return  super.getOperands().get(1);
+        else {
+            throw new RuntimeException("dimension does not match");
+        }
+    }
+
+    public Value getRightIndex() {
+        if (dimension == 2) return  super.getOperands().get(2);
+        else {
+            throw new RuntimeException("dimension does not match");
+        }
     }
 
     @Override

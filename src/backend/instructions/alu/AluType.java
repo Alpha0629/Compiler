@@ -6,5 +6,6 @@ public enum AluType {
     SUBU,
     SUBIU,
     MUL,
-    DIV
+    DIV,
+    SLL
 }

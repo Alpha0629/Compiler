@@ -7,6 +7,7 @@ import llvm.types.ValueType;
 import llvm.types.VoidType;
 import llvm.values.constants.ConstString;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collections;
 
@@ -71,6 +72,18 @@ public class Function extends Value {
 
     public ValueType getReturnType() {
         return returnValueType;
+    }
+
+    public boolean isDeclare() {
+        return isDeclare;
+    }
+
+    public ArrayList<BasicBlock> getBlocks() {
+        return blocks;
+    }
+
+    public ArrayList<ValueType> getArgTypes() {
+        return argTypes;
     }
 
     @Override

@@ -77,7 +77,7 @@ public class Compiler {
         irModule = new IrModule();
         irBuilder = new IrMaker(irModule, AST, "llvm_ir.txt");
         irBuilder.buildCompUnitIr();
-        irBuilder.outputInFile();
+        // irBuilder.outputInFile();
         // System.out.println(module.toString());
     }
 

@@ -1,16 +1,19 @@
 package backend.MipsItem;
 
 import backend.instructions.MipsInstruction;
+import llvm.values.instructions.Instruction;
 
 import java.util.ArrayList;
 
 public class MipsBlock {
     private final String blockName;
     private final ArrayList<MipsInstruction> instructions;
+    private final ArrayList<Instruction> irInstructions;
 
-    public MipsBlock(String blockName) {
+    public MipsBlock(String blockName, ArrayList<MipsInstruction> instructions,ArrayList<Instruction> irInstructions) {
         this.blockName = blockName;
-        this.instructions = new ArrayList<>();
+        this.instructions = instructions;
+        this.irInstructions = irInstructions;
     }
 
     public String getBlockName() {
@@ -19,6 +22,10 @@ public class MipsBlock {
 
     public ArrayList<MipsInstruction> getInstructions() {
         return instructions;
+    }
+
+    public ArrayList<Instruction> getIrInstructions() {
+        return irInstructions;
     }
 
     public void addInstructionToTail(MipsInstruction instruction) {

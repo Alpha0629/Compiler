@@ -25,6 +25,18 @@ public class MipsPseudo extends MipsInstruction {
         this.src = label;
     }
 
+    public PseudoType getPseudoType() {
+        return pseudoType;
+    }
+
+    public Register getDst() {
+        return dst;
+    }
+
+    public Operand getSrc() {
+        return src;
+    }
+
     @Override
     public String toString() {
         return pseudoType.toString().toLowerCase() + " " + dst.toString() + ", " + src.toString();

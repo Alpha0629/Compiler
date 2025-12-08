@@ -32,5 +32,8 @@ public enum RegisterType {
     GP,
     SP,
     FP,
-    RA
+    RA,
+    PC,
+    HI,
+    LO
 }

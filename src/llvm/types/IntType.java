@@ -11,7 +11,7 @@ public class IntType extends ValueType {
 
     @Override
     public int getBytes() {
-        return this.bytes;
+        return 4;
     }
 
     @Override

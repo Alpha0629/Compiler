@@ -2,6 +2,7 @@ package backend.instructions.branch;
 
 import backend.instructions.MipsInstruction;
 import backend.operand.Label;
+import backend.operand.Operand;
 import backend.operand.Register;
 
 public class MipsBranch extends MipsInstruction {
@@ -15,6 +16,22 @@ public class MipsBranch extends MipsInstruction {
         this.src1 = src1;
         this.src2 = src2;
         this.label = label;
+    }
+
+    public BranchType getBranchType() {
+        return branchType;
+    }
+
+    public Register getSrc1() {
+        return src1;
+    }
+
+    public Register getSrc2() {
+        return src2;
+    }
+
+    public Label getLabel() {
+        return label;
     }
 
     @Override

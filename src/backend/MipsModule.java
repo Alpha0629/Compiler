@@ -38,6 +38,30 @@ public class MipsModule {
         StringBuilder sb = new StringBuilder();
         sb.append("# Ljm 23371007 Mips\n");
         // 处理宏定义
+        // getint
+        sb.append(".macro getint\n");
+        sb.append("\tli $v0, 5\n");
+        sb.append("\tsyscall\n");
+        sb.append(".end_macro\n");
+        sb.append("\n");
+        // putint
+        sb.append(".macro putint\n");
+        sb.append("\tli $v0, 1\n");
+        sb.append("\tsyscall\n");
+        sb.append(".end_macro\n");
+        sb.append("\n");
+        // putch
+        sb.append(".macro putch\n");
+        sb.append("\tli $v0, 11\n");
+        sb.append("\tsyscall\n");
+        sb.append(".end_macro\n");
+        sb.append("\n");
+        // putstr
+        sb.append(".macro putstr\n");
+        sb.append("\tli $v0, 4\n");
+        sb.append("\tsyscall\n");
+        sb.append(".end_macro\n");
+        sb.append("\n");
         // 处理全局变量
         sb.append(".data\n");
         for (MipsGlobalVariable mipsGlobalVariable : mipsGlobalVariables) {
@@ -65,15 +89,10 @@ public class MipsModule {
         }
         sb.append("\n\n");
         sb.append(".text\n");
-
-        MipsAlu mipsAlu0 = new MipsAlu(AluType.SUBU, Register.K0, Register.A3, Register.V0);
-        MipsAlu mipsAlu1 = new MipsAlu(AluType.ADDIU, Register.T0, Register.A1, Immediate.Imm0);
-        sb.append("\t" + mipsAlu0.toString());
-        sb.append("\n");
-        sb.append("\t" + mipsAlu1.toString());
-        sb.append("\n");
-        MipsBranch mipsBranch = new MipsBranch(BranchType.BEQ, Register.S1, Register.A1, new Label("b0"));
-        sb.append("\t" + mipsBranch.toString());
+        for (MipsFunction mipsFunction : mipsFunctions) {
+            sb.append(mipsFunction.toString());
+            sb.append("\n");
+        }
         return sb.toString();
     }
 }

@@ -22,6 +22,14 @@ public class MipsJump extends MipsInstruction {
         this.goal = goal;
     }
 
+    public JumpType getJumpType() {
+        return jumpType;
+    }
+
+    public Operand getGoal() {
+        return goal;
+    }
+
     @Override
     public String toString() {
         return jumpType.toString().toLowerCase() + " " + goal.toString();
