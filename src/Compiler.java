@@ -14,6 +14,7 @@ import frontend.Error.Error;
 import frontend.Visitor.Visitor;
 import llvm.IrMaker;
 import llvm.IrModule;
+import optimization.Opt;
 
 public class Compiler {
     public static ArrayList<Error> errors = new ArrayList<>();
@@ -29,6 +30,8 @@ public class Compiler {
     public static IrModule irModule;
     public static MipsMaker mipsMaker;
     public static MipsModule mipsModule;
+    public static boolean opt = true;
+    public static Opt optimization;
 
     public static void File2String() {
         try {
@@ -75,18 +78,37 @@ public class Compiler {
     public static void generateIrBuilder() {
         System.out.println("Generating ir builder");
         irModule = new IrModule();
-        irBuilder = new IrMaker(irModule, AST, "llvm_ir.txt");
+        irBuilder = new IrMaker(irModule, AST, "llvm_no_opt.txt");
         irBuilder.buildCompUnitIr();
-        // irBuilder.outputInFile();
+        irBuilder.outputInFile();
         // System.out.println(module.toString());
     }
 
     public static void generateMips() {
         System.out.println("Generating Mips");
         mipsModule = new MipsModule();
+        mipsMaker = new MipsMaker(mipsModule, irModule, "mips_no_opt.txt");
+        mipsMaker.buildMips();
+        mipsMaker.outputInFile();
+    }
+
+    public static void generateOptMips() {
+        System.out.println("Generating Opt Mips");
+        mipsModule = new MipsModule();
         mipsMaker = new MipsMaker(mipsModule, irModule, "mips.txt");
         mipsMaker.buildMips();
         mipsMaker.outputInFile();
+    }
+
+    public static void optimization() {
+        System.out.println("Optimizing LLVM");
+        optimization = new Opt(irModule, mipsModule, "llvm_ir.txt", "mips.txt");
+        optimization.deleteDeadCode();
+        optimization.analysisDomination();
+        optimization.mem2Reg();
+        optimization.removePhi();
+        // optimization.peepHole();
+        optimization.outputInFile();
     }
 
     public static void main(String[] args) {
@@ -97,7 +119,11 @@ public class Compiler {
         generateVisitor();
         if (errors.isEmpty()) {
             generateIrBuilder();
-            generateMips();
+            // generateMips();
+            if (opt) {
+                optimization();
+                generateOptMips();
+            }
         } else {
             outputErrorInFile();
         }

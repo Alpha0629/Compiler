@@ -1,6 +1,7 @@
 package llvm.values.instructions;
 
 import llvm.types.ValueType;
+import llvm.values.BasicBlock;
 import llvm.values.User;
 import llvm.values.Value;
 
@@ -14,6 +15,10 @@ public class Instruction extends User {
 
     public Instruction(String name, ValueType valueType, Value parent) {
         super("%var" + name, valueType, parent);
+    }
+
+    public Instruction(String p, String name, ValueType valueType, Value parent) {
+        super(p + name, valueType, parent);
     }
 
     public Instruction(String name, ValueType valueType, ArrayList<Value> operands) {

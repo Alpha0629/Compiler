@@ -19,11 +19,11 @@ import llvm.values.GlobalString;
 import llvm.values.GlobalVar;
 import llvm.values.Value;
 import llvm.values.constants.ConstInt;
-import llvm.values.constants.ConstString;
 import llvm.values.instructions.Add;
 import llvm.values.instructions.Alloca;
 import llvm.values.instructions.Branch;
 import llvm.values.instructions.Call;
+import llvm.values.instructions.Copy;
 import llvm.values.instructions.Gep;
 import llvm.values.instructions.Icmp;
 import llvm.values.instructions.Icmp.Cmp;
@@ -132,9 +132,33 @@ public class MipsMaker {
             mapStore2Mips((Store) instruction);
         } else if (instruction instanceof Zext) {
             mapZext2Mips((Zext) instruction);
+        } else if (instruction instanceof Copy) {
+            mapCopy2Mips((Copy) instruction);
         } else {
             System.out.println("Unknown instruction: " + instruction);
         }
+    }
+
+    public void mapCopy2Mips(Copy copy) {
+        Value phiNode = copy.getPhiNode();
+        Value value = copy.getValue();
+        // 先处理value
+        Register reg = mipsUtils.getFreeRegister();
+        if (value instanceof ConstInt) {
+            int val = ((ConstInt) value).getVal();
+            mipsUtils.makePseudo(PseudoType.LI, reg, val);
+        } else if (mipsUtils.getValue2Reg().containsKey(value)) {
+            mipsUtils.makeAlu(AluType.ADDIU, reg, mipsUtils.getValue2Reg().get(value), 0);
+        } else {
+            System.out.println(copy.toString());
+            // 从栈上加载
+            int offset = mipsUtils.getValue2Offset().get(value);   // 要加载到的栈地址相对于sp的偏移
+            mipsUtils.makeLoad(reg, -offset, Register.SP);
+        }
+        // 把拿出来的值存放都phiNode对应的栈空间上
+        int offset = mipsUtils.getValue2Offset().get(phiNode);
+        mipsUtils.makeStore(reg, -offset, Register.SP);
+        mipsUtils.freeRegister(reg);
     }
 
     public void mapAdd2Mips(Add add) {
@@ -180,7 +204,7 @@ public class MipsMaker {
             Register right = mipsUtils.getFreeRegister();
             mipsUtils.makeLoad(right, -offset, Register.SP);
             Register dst = mipsUtils.getFreeRegister();
-            System.out.println(dst);
+            // System.out.println(dst);
             mipsUtils.makeAlu(AluType.ADDU, dst, left, right);
             offset = mipsUtils.getValue2Offset().get(add);
             mipsUtils.makeStore(dst, -offset, Register.SP);
@@ -284,8 +308,8 @@ public class MipsMaker {
             mipsUtils.makeLoad(left, -offset, Register.SP);
             offset = mipsUtils.getValue2Offset().get(rightOp);
             Register right = mipsUtils.getFreeRegister();
-            System.out.println(left + " " + right);
-            System.out.println(left == right);
+            // System.out.println(left + " " + right);
+            // System.out.println(left == right);
             mipsUtils.makeLoad(right, -offset, Register.SP);
             Register dst = mipsUtils.getFreeRegister();
             mipsUtils.makeAlu(AluType.MUL, dst, left, right);
@@ -450,7 +474,9 @@ public class MipsMaker {
         ArrayList<Value> args = call.getArguments();
         switch (funcName) {
             case "getint": {
-                mipsUtils.makeMacro("getint");
+                // mipsUtils.makeMacro("getint");
+                mipsUtils.makePseudo(PseudoType.LI, Register.V0, 5);
+                mipsUtils.makeSyscall();
                 int offset = mipsUtils.getValue2Offset().get(call);
                 mipsUtils.makeStore(Register.V0, -offset, Register.SP);
                 break;
@@ -464,7 +490,9 @@ public class MipsMaker {
                     int offset = mipsUtils.getValue2Offset().get(arg);
                     mipsUtils.makeLoad(Register.A0, -offset, Register.SP);
                 }
-                mipsUtils.makeMacro("putint");
+                // mipsUtils.makeMacro("putint");
+                mipsUtils.makePseudo(PseudoType.LI, Register.V0, 1);
+                mipsUtils.makeSyscall();
                 break;
             }
             case "putstr": {
@@ -472,7 +500,9 @@ public class MipsMaker {
                 Value arg = args.get(0);
                 int offset = mipsUtils.getValue2Offset().get(arg);
                 mipsUtils.makeLoad(Register.A0, -offset, Register.SP);
-                mipsUtils.makeMacro("putstr");
+                // mipsUtils.makeMacro("putstr");
+                mipsUtils.makePseudo(PseudoType.LI, Register.V0, 4);
+                mipsUtils.makeSyscall();
                 break;
             }
             default: {
@@ -506,6 +536,9 @@ public class MipsMaker {
                         int offset = mipsUtils.getValue2Offset().get(arg);
                         mipsUtils.makeLoad(reg, -offset, Register.SP);
                     }
+                    mipsUtils.makeAnnotation("看这里", true);
+                    int offset = curFunction.getCurOffset() + increment + (i + 1) * 4;
+                    mipsUtils.makeStore(reg, -offset, Register.SP);
                 }
                 // 2.2 后面的参数存到栈上
                 for (int i = 4; i < args.size(); i++) {
@@ -808,7 +841,7 @@ public class MipsMaker {
         mipsUtils.allocateArgs(curFunction);
         mipsUtils.allocateLeftValues(curFunction);
         mipsModule.addMipsFunction(curFunction);
-        System.out.println(curFunction);
+        // System.out.println(curFunction);
         for (BasicBlock basicBlock : function.getBlocks()) {
             buildBasicBlock(basicBlock);
         }

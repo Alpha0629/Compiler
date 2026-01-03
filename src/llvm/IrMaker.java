@@ -86,7 +86,9 @@ public class IrMaker {
 
     public static VoidType VoidType = new VoidType();
 
+    public static ConstInt CInf = new ConstInt(I32, Integer.MIN_VALUE);
     public static ConstInt C0 = new ConstInt(I32, 0);
+    public static ConstInt C1 = new ConstInt(I32, 1);
 
     public static BasicBlock currentBlock;  // 当前的块
     public static Function currentFunction; // 当前的函数体

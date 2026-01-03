@@ -22,6 +22,9 @@ public class User extends Value {
     public User(String name, ValueType valueType, Value parent, ArrayList<Value> operands) {
         super(name, valueType, parent);
         this.operands = operands;
+        for (Value operand : operands) {
+            if (operand != null) operand.addUser(this);
+        }
     }
 
     public User(String name, ValueType valueType, Value parent) {
@@ -32,6 +35,9 @@ public class User extends Value {
     public User(String name, ValueType valueType, ArrayList<Value> operands) {
         super(name, valueType);
         this.operands = operands;
+        for (Value operand : operands) {
+            if (operand != null) operand.addUser(this);
+        }
     }
 
     public User(String name, ValueType valueType) {
@@ -42,6 +48,9 @@ public class User extends Value {
     public User(ValueType valueType, Value parent, ArrayList<Value> operands) {
         super(valueType, parent);
         this.operands = operands;
+        for (Value operand : operands) {
+            if (operand != null) operand.addUser(this);
+        }
     }
 
     public User(ValueType valueType, Value parent) {
@@ -57,9 +66,27 @@ public class User extends Value {
     public User(ValueType valueType, ArrayList<Value> operands) {
         super(valueType);
         this.operands = operands;
+        for (Value operand : operands) {
+            if (operand != null) operand.addUser(this);
+        }
     }
 
     public ArrayList<Value> getOperands() {
         return operands;
+    }
+
+    public void addOperand(Value operand) {
+        operands.add(operand);
+    }
+
+    public void deleteAllUsageRelationship() {
+        for (Value operand : operands) {
+            if (operand != null) operand.removeUser(this);
+        }
+    }
+
+    public void resetOperands(ArrayList<Value> operands) {
+        this.operands.clear();
+        this.operands.addAll(operands);
     }
 }

@@ -39,29 +39,29 @@ public class MipsModule {
         sb.append("# Ljm 23371007 Mips\n");
         // 处理宏定义
         // getint
-        sb.append(".macro getint\n");
-        sb.append("\tli $v0, 5\n");
-        sb.append("\tsyscall\n");
-        sb.append(".end_macro\n");
-        sb.append("\n");
-        // putint
-        sb.append(".macro putint\n");
-        sb.append("\tli $v0, 1\n");
-        sb.append("\tsyscall\n");
-        sb.append(".end_macro\n");
-        sb.append("\n");
-        // putch
-        sb.append(".macro putch\n");
-        sb.append("\tli $v0, 11\n");
-        sb.append("\tsyscall\n");
-        sb.append(".end_macro\n");
-        sb.append("\n");
-        // putstr
-        sb.append(".macro putstr\n");
-        sb.append("\tli $v0, 4\n");
-        sb.append("\tsyscall\n");
-        sb.append(".end_macro\n");
-        sb.append("\n");
+//        sb.append(".macro getint\n");
+//        sb.append("\tli $v0, 5\n");
+//        sb.append("\tsyscall\n");
+//        sb.append(".end_macro\n");
+//        sb.append("\n");
+//        // putint
+//        sb.append(".macro putint\n");
+//        sb.append("\tli $v0, 1\n");
+//        sb.append("\tsyscall\n");
+//        sb.append(".end_macro\n");
+//        sb.append("\n");
+//        // putch
+//        sb.append(".macro putch\n");
+//        sb.append("\tli $v0, 11\n");
+//        sb.append("\tsyscall\n");
+//        sb.append(".end_macro\n");
+//        sb.append("\n");
+//        // putstr
+//        sb.append(".macro putstr\n");
+//        sb.append("\tli $v0, 4\n");
+//        sb.append("\tsyscall\n");
+//        sb.append(".end_macro\n");
+//        sb.append("\n");
         // 处理全局变量
         sb.append(".data\n");
         for (MipsGlobalVariable mipsGlobalVariable : mipsGlobalVariables) {

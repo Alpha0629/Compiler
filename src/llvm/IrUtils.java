@@ -21,11 +21,13 @@ import llvm.values.instructions.Alloca;
 import llvm.values.instructions.And;
 import llvm.values.instructions.Branch;
 import llvm.values.instructions.Call;
+import llvm.values.instructions.Copy;
 import llvm.values.instructions.Gep;
 import llvm.values.instructions.Icmp;
 import llvm.values.instructions.Load;
 import llvm.values.instructions.Mul;
 import llvm.values.instructions.Or;
+import llvm.values.instructions.Phi;
 import llvm.values.instructions.Ret;
 import llvm.values.instructions.Sdiv;
 import llvm.values.instructions.Srem;
@@ -44,6 +46,8 @@ public class IrUtils {
 
     public static int nameCount = 0;
     public static int stringCount = 0;
+    public static int phiCount = 0;
+    public static int blockCount = 0;
 
     public IrUtils(IrModule module, IrSymbolTableStack irSymbolTableStack) {
         this.module = module;
@@ -110,7 +114,8 @@ public class IrUtils {
     }
 
     public BasicBlock makeBasicBlock(boolean updateCurrentBlock) {
-        BasicBlock basicBlock = new BasicBlock(String.valueOf(nameCount++), new LabelType(), IrMaker.currentFunction);
+        // BasicBlock basicBlock = new BasicBlock(String.valueOf(nameCount++), new LabelType(), IrMaker.currentFunction);
+        BasicBlock basicBlock = new BasicBlock(String.valueOf(blockCount++), new LabelType(), IrMaker.currentFunction);
         IrMaker.currentFunction.addBlock(basicBlock);
         if (updateCurrentBlock) IrMaker.currentBlock = basicBlock;
         return basicBlock;
@@ -247,6 +252,18 @@ public class IrUtils {
         Or or = new Or(String.valueOf(nameCount++), intType, IrMaker.currentBlock, leftOp, rightOp);
         IrMaker.currentBlock.addInstructionToTail(or);
         return or;
+    }
+
+    public static Phi makePhi(Alloca alloca, BasicBlock phiBlock) {
+        ValueType valueType = ((PointerType)alloca.getValueType()).getPointedType();
+        // System.out.println("PhiCounter: " + phiCount);
+        Phi phi = new Phi(String.valueOf(phiCount++), valueType, phiBlock);
+        return phi;
+    }
+
+    public static Copy makeCopy(Value phiNode, Value value, BasicBlock copyBlock) {
+        Copy copy = new Copy(new VoidType(), copyBlock, phiNode, value);
+        return copy;
     }
 
     public ArrayList<String> splitConstString(String origin) {

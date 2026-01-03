@@ -33,6 +33,7 @@ import llvm.values.constants.ConstArray;
 import llvm.values.constants.ConstInt;
 import llvm.values.constants.Constant;
 import llvm.values.instructions.Alloca;
+import llvm.values.instructions.Copy;
 import llvm.values.instructions.Instruction;
 
 import java.util.ArrayList;
@@ -59,7 +60,7 @@ public class MipsUtils {
             int bytes = argType.getBytes();
             mipsFunction.addCurOffset(bytes);
             mipsFunction.getValue2Offset().put(arg, mipsFunction.getCurOffset());
-            System.out.println("给第" + i + "个参数分配栈空间, 其相对于$sp($sp表示当前函数体的起始栈空间)的偏移为" + mipsFunction.getCurOffset());
+            // System.out.println("给第" + i + "个参数分配栈空间, 其相对于$sp($sp表示当前函数体的起始栈空间)的偏移为" + mipsFunction.getCurOffset());
             if (i == 0) {
                 mipsFunction.getValue2Reg().put(arg, Register.A0);
             } else if (i == 1) {
@@ -75,15 +76,24 @@ public class MipsUtils {
     public void allocateLeftValues(MipsFunction mipsFunction) {
         ArrayList<Instruction> instructions = mipsFunction.getAllIrInstructions();
         for (Instruction instruction : instructions) {
-            if (!instruction.withoutName()) {
-                // 给每个有var的指令分配4个字节的空间
-                int bytes = instruction.getValueType().getBytes();
-                // System.out.println(instruction.getValueType());
-                // System.out.println(bytes);
-                mipsFunction.addCurOffset(bytes);
-                mipsFunction.getValue2Offset().put(instruction, mipsFunction.getCurOffset());
-                System.out.println("The cur instrution is: " + instruction + " with offset: " + mipsFunction.getCurOffset());
-                this.makeAnnotation(instruction.getName() + " is allocated at -" + (mipsFunction.getCurOffset()) + "($sp)");
+            if (!instruction.withoutName() || instruction instanceof Copy copy) {
+                if (!instruction.withoutName()) {
+                    // 给每个有var的指令分配4个字节的空间
+                    System.out.println(instruction.toString());
+                    int bytes = instruction.getValueType().getBytes();
+                    mipsFunction.addCurOffset(bytes);
+                    mipsFunction.getValue2Offset().put(instruction, mipsFunction.getCurOffset());
+                    // System.out.println("The cur instrution is: " + instruction + " with offset: " + mipsFunction.getCurOffset());
+                    this.makeAnnotation(instruction.getName() + " is allocated at -" + (mipsFunction.getCurOffset()) + "($sp)");
+                } else if (instruction instanceof Copy copy) {
+                    Value phiNode = copy.getPhiNode();
+                    if (mipsFunction.getValue2Offset().containsKey(phiNode)) continue;
+                    int bytes = phiNode.getValueType().getBytes();
+                    mipsFunction.addCurOffset(bytes);
+                    mipsFunction.getValue2Offset().put(phiNode, mipsFunction.getCurOffset());
+                    // System.out.println("The cur instrution is: " + phiNode + " with offset: " + mipsFunction.getCurOffset());
+                    this.makeAnnotation(phiNode.getName() + " is allocated at -" + (mipsFunction.getCurOffset()) + "($sp)");
+                }
             }
         }
     }
@@ -186,6 +196,11 @@ public class MipsUtils {
     public void makeAnnotation(String content) {
         Annotation annotation = new Annotation(content);
         MipsMaker.curFunction.addHeadInstructions(annotation);
+    }
+
+    public void makeAnnotation(String content, boolean a) {
+        Annotation annotation = new Annotation(content);
+        MipsMaker.curBlock.addInstructionToTail(annotation);
     }
 
     public void makeMacro(String content) {
